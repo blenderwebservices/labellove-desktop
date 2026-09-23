@@ -32,6 +32,49 @@
         <span class="brand-badge">PROTOTYPE</span>
       </a>
 
+      <!-- File Operations Menu / Buttons -->
+      <div class="file-actions-group">
+        <button class="topbar-action-btn" id="btnNewDoc" title="Nueva etiqueta (Cmd+N)">
+          <span>📄</span>
+          <span>Nuevo</span>
+        </button>
+
+        <div class="dropdown-container">
+          <button class="topbar-action-btn" id="btnOpenMenu" title="Abrir etiqueta (Cmd+O)">
+            <span>📂</span>
+            <span>Abrir</span>
+            <span class="dropdown-arrow">▾</span>
+          </button>
+          <div class="dropdown-menu" id="openMenuDropdown">
+            <button class="dropdown-item" id="btnOpenRecent">
+              <span class="dropdown-item-icon">⭐</span>
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Mis Etiquetas Guardadas</span>
+                <span class="dropdown-item-sub">Abrir proyectos guardados en el navegador</span>
+              </div>
+            </button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="btnOpenFile">
+              <span class="dropdown-item-icon">💻</span>
+              <div class="dropdown-item-content">
+                <span class="dropdown-item-title">Abrir archivo local...</span>
+                <span class="dropdown-item-sub">Archivo .labellove o .json (Cmd+O)</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <button class="topbar-action-btn" id="btnSaveDoc" title="Guardar cambios (Cmd+S)">
+          <span>💾</span>
+          <span>Guardar</span>
+        </button>
+
+        <button class="topbar-action-btn" id="btnSaveAsDoc" title="Guardar como archivo .labellove en tu equipo">
+          <span>⬇️</span>
+          <span>Exportar</span>
+        </button>
+      </div>
+
       <div class="project-selector">
         <input type="text" class="project-name-input" value="Etiqueta Envío Express 4x6" title="Click para renombrar">
         <select class="template-dropdown-select" id="templateSelect">
@@ -39,6 +82,12 @@
           <option value="warehouse_50x30">🏷️ Almacén / Retail (50x30 mm)</option>
           <option value="avery_5160">📄 Pliego Avery 5160 (Carta - 30 etiquetas)</option>
         </select>
+      </div>
+
+      <!-- Save Status Pill -->
+      <div class="save-status-badge" id="saveStatusBadge" title="Todos los cambios están guardados">
+        <span class="status-dot dot-saved"></span>
+        <span class="status-text">Guardado</span>
       </div>
     </div>
 
@@ -433,6 +482,66 @@
       </div>
     </div>
   </div>
+
+  <!-- ========================================================================
+       7. Recent Projects & Open Document Modal
+       ======================================================================== -->
+  <div class="modal-backdrop" id="recentProjectsModal">
+    <div class="modal-window modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📂</span>
+          <span>Mis Etiquetas y Proyectos Guardados</span>
+        </div>
+        <button class="modal-close-btn" id="closeRecentProjectsBtn">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="recent-projects-bar">
+          <div>
+            <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 2px; color: var(--text-main);">
+              Proyectos en este navegador
+            </h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 0;">
+              Etiquetas guardadas localmente. También puedes importar archivos .labellove desde tu computadora.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-secondary" id="importModalBtn">
+              <span>📥</span>
+              <span>Abrir Archivo (.labellove)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid of recent projects -->
+        <div class="recent-projects-grid" id="recentProjectsGrid">
+          <!-- Populated dynamically by DocumentManager -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span style="font-size: 11px; color: var(--text-muted);">
+          Tip: Puedes arrastrar cualquier archivo <code>.labellove</code> directamente sobre el lienzo para abrirlo.
+        </span>
+        <button class="btn-secondary" id="closeRecentModalBottomBtn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       8. Drag & Drop File Overlay
+       ======================================================================== -->
+  <div class="dropzone-overlay" id="dropzoneOverlay">
+    <div class="dropzone-card">
+      <div class="dropzone-icon">⚡</div>
+      <h3>Soltar archivo para abrir</h3>
+      <p>Suelta tu archivo <code>.labellove</code> o <code>.json</code> para cargar la etiqueta inmediatamente.</p>
+    </div>
+  </div>
+
+  <!-- Hidden native file input for opening files -->
+  <input type="file" id="fileOpenInput" accept=".labellove,.json" style="display: none;">
 
   <!-- Main Application Entry Module -->
   <script type="module" src="js/app.js"></script>

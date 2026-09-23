@@ -1,0 +1,228 @@
+{
+  "$schema": "https://labellove.app/schemas/v1.json",
+  "format": "labellove",
+  "version": "1.0.0",
+  "metadata": {
+    "id": "lbl_demo_shipping",
+    "name": "Etiqueta Envío Express 4x6 (Demo)",
+    "createdAt": "2026-09-23T15:00:00.000Z",
+    "updatedAt": "2026-09-23T15:00:00.000Z",
+    "author": "LabelLove Samples",
+    "generator": "LabelLove v1.0"
+  },
+  "label": {
+    "widthMm": 100,
+    "heightMm": 150,
+    "type": "roll",
+    "substrate": "thermal",
+    "orientation": "portrait",
+    "dpi": 203,
+    "safeMarginMm": 1.5,
+    "sheetConfig": null
+  },
+  "elements": [
+    {
+      "id": "el_header_band",
+      "type": "shape",
+      "shapeType": "rect",
+      "xMm": 4,
+      "yMm": 4,
+      "widthMm": 92,
+      "heightMm": 14,
+      "fillColor": "#000000"
+    },
+    {
+      "id": "el_carrier_name",
+      "type": "text",
+      "text": "EXPRESS AIR LOGISTICS ⚡",
+      "xMm": 6,
+      "yMm": 7,
+      "widthMm": 60,
+      "heightMm": 8,
+      "fontSize": 14,
+      "fontWeight": "bold",
+      "color": "#ffffff"
+    },
+    {
+      "id": "el_service_badge",
+      "type": "text",
+      "text": "PRIORITY 24H",
+      "xMm": 72,
+      "yMm": 7.5,
+      "widthMm": 22,
+      "heightMm": 7,
+      "fontSize": 9,
+      "fontWeight": "bold",
+      "color": "#ffffff"
+    },
+    {
+      "id": "el_sender_title",
+      "type": "text",
+      "text": "REMITENTE:",
+      "xMm": 6,
+      "yMm": 21,
+      "widthMm": 25,
+      "heightMm": 4,
+      "fontSize": 8,
+      "fontWeight": "bold",
+      "color": "#666666"
+    },
+    {
+      "id": "el_sender_info",
+      "type": "text",
+      "text": "LabelLove Fulfillment Center - Hub Norte\nAv. de las Industrias 500, Bodega 4\nMonterrey, N.L. C.P. 64000",
+      "xMm": 6,
+      "yMm": 26,
+      "widthMm": 88,
+      "heightMm": 14,
+      "fontSize": 9,
+      "fontWeight": "normal",
+      "color": "#000000"
+    },
+    {
+      "id": "el_div_1",
+      "type": "shape",
+      "shapeType": "line",
+      "xMm": 4,
+      "yMm": 42,
+      "widthMm": 92,
+      "heightMm": 1
+    },
+    {
+      "id": "el_recipient_title",
+      "type": "text",
+      "text": "DESTINATARIO:",
+      "xMm": 6,
+      "yMm": 45,
+      "widthMm": 30,
+      "heightMm": 5,
+      "fontSize": 9,
+      "fontWeight": "bold",
+      "color": "#666666"
+    },
+    {
+      "id": "el_recipient_name",
+      "type": "text",
+      "text": "{{ nombre_cliente }}",
+      "field": "nombre_cliente",
+      "xMm": 6,
+      "yMm": 51,
+      "widthMm": 88,
+      "heightMm": 9,
+      "fontSize": 15,
+      "fontWeight": "bold",
+      "color": "#000000"
+    },
+    {
+      "id": "el_recipient_addr",
+      "type": "text",
+      "text": "{{ direccion }}",
+      "field": "direccion",
+      "xMm": 6,
+      "yMm": 61,
+      "widthMm": 88,
+      "heightMm": 10,
+      "fontSize": 11,
+      "fontWeight": "normal",
+      "color": "#000000"
+    },
+    {
+      "id": "el_recipient_city",
+      "type": "text",
+      "text": "{{ ciudad }}  C.P. {{ codigo_postal }}",
+      "xMm": 6,
+      "yMm": 72,
+      "widthMm": 88,
+      "heightMm": 7,
+      "fontSize": 11,
+      "fontWeight": "bold",
+      "color": "#000000"
+    },
+    {
+      "id": "el_div_2",
+      "type": "shape",
+      "shapeType": "line",
+      "xMm": 4,
+      "yMm": 82,
+      "widthMm": 92,
+      "heightMm": 1
+    },
+    {
+      "id": "el_barcode_tracking",
+      "type": "barcode",
+      "format": "CODE128",
+      "value": "{{ tracking_code }}",
+      "field": "tracking_code",
+      "xMm": 10,
+      "yMm": 88,
+      "widthMm": 80,
+      "heightMm": 24,
+      "displayValue": true
+    },
+    {
+      "id": "el_qr_routing",
+      "type": "qr",
+      "value": "https://labellove.test/track/{{ tracking_code }}",
+      "xMm": 12,
+      "yMm": 118,
+      "widthMm": 22,
+      "heightMm": 22
+    },
+    {
+      "id": "el_routing_code",
+      "type": "text",
+      "text": "HUB-MTY-01",
+      "xMm": 40,
+      "yMm": 120,
+      "widthMm": 45,
+      "heightMm": 8,
+      "fontSize": 16,
+      "fontWeight": "bold",
+      "color": "#000000"
+    },
+    {
+      "id": "el_order_ref",
+      "type": "text",
+      "text": "ORDEN: #{{ orden_id }} | SKU: {{ sku }}",
+      "xMm": 40,
+      "yMm": 130,
+      "widthMm": 52,
+      "heightMm": 6,
+      "fontSize": 9,
+      "fontWeight": "normal",
+      "color": "#333333"
+    }
+  ],
+  "dataStore": {
+    "columns": ["orden_id", "nombre_cliente", "direccion", "ciudad", "codigo_postal", "sku", "precio", "tracking_code", "status"],
+    "records": [
+      {
+        "orden_id": "10842",
+        "nombre_cliente": "Mariana Torres Valenzuela",
+        "direccion": "Av. Paseo de la Reforma 222, Piso 8, Int. 802",
+        "ciudad": "Ciudad de México, CDMX",
+        "codigo_postal": "06600",
+        "sku: ": "AUR-WL-PRO-BLK",
+        "precio": "1899.00",
+        "tracking_code": "MX-982441-TR",
+        "status": "Listo"
+      },
+      {
+        "orden_id": "10843",
+        "nombre_cliente": "Carlos Mendoza Garza",
+        "direccion": "Calle Roble 45, Col. Valle Oriente",
+        "ciudad": "San Pedro Garza García, N.L.",
+        "codigo_postal": "66269",
+        "sku": "MOU-ERG-RGB-WHT",
+        "precio": "749.50",
+        "tracking_code": "MX-982442-TR",
+        "status": "Listo"
+      }
+    ],
+    "activeRecordIndex": 0
+  },
+  "viewState": {
+    "zoom": 1.0,
+    "viewMode": "roll"
+  }
+}

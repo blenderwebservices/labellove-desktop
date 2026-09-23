@@ -7,14 +7,19 @@ import { CanvasEngine } from './canvas.js';
 import { TEMPLATES } from './templates.js';
 import { ZPLGenerator } from './zpl-generator.js';
 import { BarcodeEngine } from './barcode-engine.js';
+import { DocumentManager } from './document-manager.js';
 
 class App {
   constructor() {
     this.dataStore = new DataStore();
+    this.docManager = new DocumentManager(this);
     this.canvasEngine = new CanvasEngine({
       dataStore: this.dataStore,
       onSelectionChange: (el) => this.onElementSelected(el),
-      onElementUpdate: (el) => this.updateInspectorValues(el)
+      onElementUpdate: (el) => {
+        this.updateInspectorValues(el);
+        this.docManager?.setUnsavedChanges(true);
+      }
     });
 
     this.currentTemplateId = 'shipping_4x6';
@@ -22,8 +27,12 @@ class App {
   }
 
   init() {
-    // 1. Load initial template
-    this.canvasEngine.loadTemplate(TEMPLATES[this.currentTemplateId]);
+    // 1. Try to restore auto-saved session or load default template
+    if (this.docManager.hasAutoSavedDocument()) {
+      this.docManager.restoreAutoSavedDocument();
+    } else {
+      this.canvasEngine.loadTemplate(TEMPLATES[this.currentTemplateId]);
+    }
 
     // 2. Setup Data Drawer & Table
     this.renderDataTable();
@@ -41,6 +50,7 @@ class App {
       this.updateRecordScrubber();
       this.updateActiveTableRow();
       this.updateOverflowAlerts();
+      this.docManager?.setUnsavedChanges(true);
     });
 
     console.log('⚡ LabelLove Application initialized successfully');
@@ -50,6 +60,77 @@ class App {
   // UI & Toolbar Interactions
   // ------------------------------------------------------------------------
   setupUIEvents() {
+    // ------------------------------------------------------------------------
+    // Document File Operations (Nuevo, Abrir, Guardar, Exportar)
+    // ------------------------------------------------------------------------
+    document.getElementById('btnNewDoc')?.addEventListener('click', () => {
+      this.docManager.createNewDocument(this.currentTemplateId);
+    });
+
+    const openMenuBtn = document.getElementById('btnOpenMenu');
+    const openMenuDropdown = document.getElementById('openMenuDropdown');
+    openMenuBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMenuDropdown?.classList.toggle('is-open');
+    });
+
+    document.addEventListener('click', () => {
+      openMenuDropdown?.classList.remove('is-open');
+    });
+
+    // Recent Projects Modal
+    const recentModal = document.getElementById('recentProjectsModal');
+    document.getElementById('btnOpenRecent')?.addEventListener('click', () => {
+      openMenuDropdown?.classList.remove('is-open');
+      this.renderRecentProjectsGrid();
+      recentModal?.classList.add('is-open');
+    });
+
+    document.getElementById('closeRecentProjectsBtn')?.addEventListener('click', () => {
+      recentModal?.classList.remove('is-open');
+    });
+    document.getElementById('closeRecentModalBottomBtn')?.addEventListener('click', () => {
+      recentModal?.classList.remove('is-open');
+    });
+
+    // Open from file
+    document.getElementById('btnOpenFile')?.addEventListener('click', () => {
+      openMenuDropdown?.classList.remove('is-open');
+      this.docManager.openFromFile();
+    });
+
+    document.getElementById('importModalBtn')?.addEventListener('click', () => {
+      recentModal?.classList.remove('is-open');
+      this.docManager.openFromFile();
+    });
+
+    // Save & Export
+    document.getElementById('btnSaveDoc')?.addEventListener('click', () => {
+      this.docManager.saveToFile(false);
+    });
+
+    document.getElementById('btnSaveAsDoc')?.addEventListener('click', () => {
+      this.docManager.saveToFile(true);
+    });
+
+    // Native file input change
+    const fileOpenInput = document.getElementById('fileOpenInput');
+    fileOpenInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        this.docManager.loadFromFileObject(file);
+      }
+    });
+
+    // Project Name edit
+    const projNameInput = document.querySelector('.project-name-input');
+    projNameInput?.addEventListener('input', () => {
+      this.docManager.setUnsavedChanges(true);
+    });
+
+    // Setup Drag & Drop
+    this.setupDragAndDrop();
+
     // Template Selector
     const templateSelect = document.getElementById('templateSelect');
     if (templateSelect) {
@@ -59,6 +140,7 @@ class App {
         this.canvasEngine.loadTemplate(template);
         this.updateInspectorLabelSettings();
         this.updateSegmentedControl(template.type || 'roll');
+        this.docManager.setUnsavedChanges(true);
       });
     }
 
@@ -82,6 +164,7 @@ class App {
             this.canvasEngine.loadTemplate(TEMPLATES['shipping_4x6']);
           }
         }
+        this.docManager.setUnsavedChanges(true);
       });
     });
 
@@ -91,6 +174,7 @@ class App {
         document.querySelectorAll('.substrate-pill').forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
         this.canvasEngine.setSubstrate(pill.dataset.substrate);
+        this.docManager.setUnsavedChanges(true);
       });
     });
 
@@ -115,6 +199,7 @@ class App {
         widthMm: 40,
         heightMm: 8
       });
+      this.docManager.setUnsavedChanges(true);
     });
 
     document.getElementById('toolAddBarcode')?.addEventListener('click', () => {
@@ -126,6 +211,7 @@ class App {
         heightMm: 18,
         displayValue: true
       });
+      this.docManager.setUnsavedChanges(true);
     });
 
     document.getElementById('toolAddQR')?.addEventListener('click', () => {
@@ -135,6 +221,7 @@ class App {
         widthMm: 24,
         heightMm: 24
       });
+      this.docManager.setUnsavedChanges(true);
     });
 
     document.getElementById('toolAddBox')?.addEventListener('click', () => {
@@ -144,6 +231,7 @@ class App {
         widthMm: 40,
         heightMm: 20
       });
+      this.docManager.setUnsavedChanges(true);
     });
 
     document.getElementById('toolAddLine')?.addEventListener('click', () => {
@@ -153,6 +241,7 @@ class App {
         widthMm: 50,
         heightMm: 1
       });
+      this.docManager.setUnsavedChanges(true);
     });
 
     document.getElementById('toolAddVariable')?.addEventListener('click', () => {
@@ -165,6 +254,7 @@ class App {
         widthMm: 60,
         heightMm: 9
       });
+      this.docManager.setUnsavedChanges(true);
     });
 
     // Drawer Toggle
@@ -566,13 +656,35 @@ class App {
         return;
       }
 
+      // Cmd+S / Ctrl+S (Guardar)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        this.docManager.saveToFile(false);
+        return;
+      }
+
+      // Cmd+O / Ctrl+O (Abrir archivo)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        this.docManager.openFromFile();
+        return;
+      }
+
+      // Cmd+N / Ctrl+N (Nueva etiqueta)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        this.docManager.createNewDocument(this.currentTemplateId);
+        return;
+      }
+
       // Delete / Backspace
       if (e.key === 'Delete' || e.key === 'Backspace') {
         this.canvasEngine.deleteSelectedElement();
+        this.docManager.setUnsavedChanges(true);
       }
 
       // Cmd+P / Ctrl+P
-      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         this.openPrintModal();
       }
@@ -581,6 +693,8 @@ class App {
       if (e.key === 'Escape') {
         this.canvasEngine.selectElement(null);
         document.getElementById('printModal')?.classList.remove('is-open');
+        document.getElementById('recentProjectsModal')?.classList.remove('is-open');
+        document.getElementById('openMenuDropdown')?.classList.remove('is-open');
       }
 
       // Arrow keys nudging
@@ -598,9 +712,140 @@ class App {
           this.canvasEngine.updateTransformer();
           this.canvasEngine.updateHUD();
           this.updateInspectorValues(el);
+          this.docManager.setUnsavedChanges(true);
         }
       }
     });
+  }
+
+  // ------------------------------------------------------------------------
+  // Drag & Drop File Handling
+  // ------------------------------------------------------------------------
+  setupDragAndDrop() {
+    const overlay = document.getElementById('dropzoneOverlay');
+    let dragCounter = 0;
+
+    window.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dragCounter++;
+      if (overlay) overlay.classList.add('is-active');
+    });
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        if (overlay) overlay.classList.remove('is-active');
+      }
+    });
+
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      if (overlay) overlay.classList.remove('is-active');
+
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        if (file.name.endsWith('.labellove') || file.name.endsWith('.json')) {
+          this.docManager.loadFromFileObject(file);
+        } else {
+          alert('Por favor arrastra un archivo válido con extensión .labellove o .json');
+        }
+      }
+    });
+  }
+
+  // ------------------------------------------------------------------------
+  // Recent Projects Grid Renderer
+  // ------------------------------------------------------------------------
+  renderRecentProjectsGrid() {
+    const grid = document.getElementById('recentProjectsGrid');
+    if (!grid) return;
+
+    const projects = this.docManager.getRecentProjects();
+    if (projects.length === 0) {
+      grid.innerHTML = `
+        <div class="recent-empty-state">
+          <div class="recent-empty-icon">📂</div>
+          <h4 style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">No hay etiquetas guardadas</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Tus etiquetas guardadas localmente aparecerán aquí para acceso rápido.</p>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = projects.map(proj => {
+      const meta = proj.metadata || {};
+      const lbl = proj.label || {};
+      const dateStr = meta.updatedAt ? new Date(meta.updatedAt).toLocaleDateString(undefined, {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      }) : 'Reciente';
+
+      const typeLabel = lbl.type === 'sheet' ? '📄 Pliego' : '🖨️ Rollo';
+      const substrateLabel = {
+        thermal: 'Térmico Directo',
+        gloss: 'Blanco Brillante',
+        kraft: 'Papel Kraft',
+        clear: 'Transparente'
+      }[lbl.substrate] || lbl.substrate || 'Térmico';
+
+      return `
+        <div class="recent-project-card" data-id="${meta.id}">
+          <div class="recent-card-header">
+            <div>
+              <div class="recent-card-title">${this.escapeHtml(meta.name || 'Etiqueta sin título')}</div>
+              <div class="recent-card-specs">
+                <span class="spec-badge">${lbl.widthMm || 100} × ${lbl.heightMm || 150} mm</span>
+                <span class="spec-badge">${typeLabel}</span>
+                <span class="spec-badge">${substrateLabel}</span>
+              </div>
+            </div>
+          </div>
+          <div class="recent-card-footer">
+            <span class="recent-card-date">${dateStr}</span>
+            <div class="recent-card-actions">
+              <button class="btn-card-del" data-id="${meta.id}" title="Eliminar de proyectos recientes">🗑️</button>
+              <button class="btn-card-open" data-id="${meta.id}">Abrir</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach open and delete events
+    grid.querySelectorAll('.btn-card-open').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const project = projects.find(p => p.metadata.id === id);
+        if (project && project.fullDoc) {
+          this.docManager.loadDocument(project.fullDoc);
+          document.getElementById('recentProjectsModal')?.classList.remove('is-open');
+        }
+      });
+    });
+
+    grid.querySelectorAll('.btn-card-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        if (confirm('¿Eliminar esta etiqueta de tus proyectos recientes?')) {
+          this.docManager.deleteRecentProject(id);
+          this.renderRecentProjectsGrid();
+        }
+      });
+    });
+  }
+
+  escapeHtml(str) {
+    return (str || '').replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
   }
 }
 
