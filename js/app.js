@@ -571,9 +571,42 @@ class App {
   updateInspectorLabelSettings() {
     const t = this.canvasEngine.currentTemplate;
     if (!t) return;
-    document.getElementById('labelWidthMm').value = t.widthMm;
-    document.getElementById('labelHeightMm').value = t.heightMm;
-    document.getElementById('labelDpi').value = t.dpi;
+    const wInput = document.getElementById('labelWidthMm');
+    const hInput = document.getElementById('labelHeightMm');
+    const dpiSelect = document.getElementById('labelDpi');
+    if (wInput) wInput.value = t.widthMm;
+    if (hInput) hInput.value = t.heightMm;
+    if (dpiSelect) dpiSelect.value = t.dpi || 203;
+
+    this.updateCanvasDimBadge();
+    this.syncPresetSelect(t.widthMm, t.heightMm);
+  }
+
+  updateCanvasDimBadge() {
+    const t = this.canvasEngine.currentTemplate;
+    const badgeLabel = document.getElementById('canvasDimLabel');
+    if (t && badgeLabel) {
+      badgeLabel.textContent = `${t.widthMm} × ${t.heightMm} mm`;
+    }
+  }
+
+  syncPresetSelect(widthMm, heightMm) {
+    const presetSelect = document.getElementById('labelPresetSelect');
+    if (!presetSelect) return;
+    let matched = false;
+    for (const opt of presetSelect.options) {
+      if (opt.value && opt.value.includes('x')) {
+        const [pw, ph] = opt.value.split('x').map(parseFloat);
+        if (Math.abs(pw - widthMm) < 0.2 && Math.abs(ph - heightMm) < 0.2) {
+          presetSelect.value = opt.value;
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (!matched) {
+      presetSelect.value = 'custom';
+    }
   }
 
   updateSegmentedControl(mode) {
@@ -778,6 +811,39 @@ class App {
           this.updateInspectorValues(el);
           this.docManager.setUnsavedChanges(true);
         }
+      }
+
+      // Inkscape Zoom Shortcuts: Cmd/Ctrl + = / +, -, 0, 1
+      if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        this.canvasEngine.setZoom(this.canvasEngine.zoom * 1.15);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        this.canvasEngine.setZoom(this.canvasEngine.zoom / 1.15);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+        e.preventDefault();
+        this.canvasEngine.fitToScreen();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+        e.preventDefault();
+        this.canvasEngine.setZoom(1.0);
+        return;
+      }
+
+      // Space key for Pan (Hand Tool)
+      if (e.code === 'Space' && !e.repeat) {
+        this.canvasEngine.setSpacePan(true);
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') {
+        this.canvasEngine.setSpacePan(false);
       }
     });
   }
