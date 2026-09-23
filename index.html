@@ -121,6 +121,12 @@
         <button class="zoom-btn" id="zoomFitBtn" title="Restablecer al 100%" style="font-size: 10px; width: 32px;">FIT</button>
       </div>
 
+      <!-- Canvas Dimensions Badge Button -->
+      <button class="canvas-dim-badge" id="canvasDimBadge" title="Dimensiones del Lienzo (Click para editar)">
+        <span>📐</span>
+        <span id="canvasDimLabel">100 × 150 mm</span>
+      </button>
+
       <!-- Quick Action Buttons -->
       <button class="btn-primary" id="topbarPrintBtn">
         <span>🖨️</span>
@@ -194,62 +200,74 @@
 
     <!-- Canvas Interactive Viewport -->
     <div class="canvas-viewport" id="canvasViewport">
-      
-      <!-- Label Stage (Physical Label Representation) -->
-      <div class="label-stage substrate-thermal" id="labelStage">
-        
-        <!-- Safety Margin Border (Dashed line) -->
-        <div class="safety-margin">
-          <span class="safety-margin-label">Margen Seguro 1.5mm</span>
-        </div>
-
-        <!-- Dynamic Elements Layer -->
-        <div class="label-elements-layer" id="labelElementsLayer">
-          <!-- Elements dynamically injected via canvas.js -->
-        </div>
-
-        <!-- Magnetic Alignment Smart Guides -->
-        <div class="magnetic-guide-x" id="magneticGuideX" style="display: none;"></div>
-        <div class="magnetic-guide-y" id="magneticGuideY" style="display: none;"></div>
-
-        <!-- Transformer Bounding Box & 8 Handles -->
-        <div class="transformer-box" id="transformerBox" style="display: none;">
-          <div class="handle nw" id="handle-nw"></div>
-          <div class="handle n"  id="handle-n"></div>
-          <div class="handle ne" id="handle-ne"></div>
-          <div class="handle e"  id="handle-e"></div>
-          <div class="handle se" id="handle-se"></div>
-          <div class="handle s"  id="handle-s"></div>
-          <div class="handle sw" id="handle-sw"></div>
-          <div class="handle w"  id="handle-w"></div>
-          <div class="dimension-pill" id="dimensionPill">0.0 × 0.0 mm</div>
-        </div>
-
-        <!-- Floating Contextual HUD (Direct manipulation mini-toolbar) -->
-        <div class="floating-hud" id="floatingHud" style="display: none;">
-          <div id="hudTextControls" style="display: flex; align-items: center; gap: 4px;">
-            <select class="hud-select" id="hudFontFamily">
-              <option value="Inter">Inter</option>
-              <option value="JetBrains Mono">JetBrains Mono</option>
-              <option value="Arial">Arial</option>
-            </select>
-            <input type="number" class="hud-select" id="hudFontSize" style="width: 48px;" min="6" max="72" value="12">
-            <button class="hud-btn" id="hudBoldBtn"><strong>B</strong></button>
+      <div class="canvas-world" id="canvasWorld">
+        <!-- Label Stage (Physical Label Representation) -->
+        <div class="label-stage substrate-thermal" id="labelStage">
+          
+          <!-- Safety Margin Border (Dashed line) -->
+          <div class="safety-margin">
+            <span class="safety-margin-label">Margen Seguro 1.5mm</span>
           </div>
 
-          <div id="hudBarcodeControls" style="display: none; align-items: center; gap: 4px;">
-            <select class="hud-select" id="hudBarcodeFormat">
-              <option value="CODE128">Code 128 (Estándar)</option>
-              <option value="EAN13">EAN-13 (Comercio)</option>
-              <option value="UPCA">UPC-A (Retail USA)</option>
-              <option value="CODE39">Code 39</option>
-            </select>
+          <!-- Dynamic Elements Layer -->
+          <div class="label-elements-layer" id="labelElementsLayer">
+            <!-- Elements dynamically injected via canvas.js -->
           </div>
 
-          <div class="hud-divider"></div>
-          <span style="font-size: 10px; color: var(--accent-cyan); font-family: var(--font-mono); padding: 0 4px;">{{ Enlazado }}</span>
-        </div>
+          <!-- Magnetic Alignment Smart Guides -->
+          <div class="magnetic-guide-x" id="magneticGuideX" style="display: none;"></div>
+          <div class="magnetic-guide-y" id="magneticGuideY" style="display: none;"></div>
 
+          <!-- Transformer Bounding Box & 8 Handles -->
+          <div class="transformer-box" id="transformerBox" style="display: none;">
+            <div class="handle nw" id="handle-nw"></div>
+            <div class="handle n"  id="handle-n"></div>
+            <div class="handle ne" id="handle-ne"></div>
+            <div class="handle e"  id="handle-e"></div>
+            <div class="handle se" id="handle-se"></div>
+            <div class="handle s"  id="handle-s"></div>
+            <div class="handle sw" id="handle-sw"></div>
+            <div class="handle w"  id="handle-w"></div>
+            <div class="dimension-pill" id="dimensionPill">0.0 × 0.0 mm</div>
+          </div>
+
+          <!-- Floating Contextual HUD (Direct manipulation mini-toolbar) -->
+          <div class="floating-hud" id="floatingHud" style="display: none;">
+            <div id="hudTextControls" style="display: flex; align-items: center; gap: 4px;">
+              <select class="hud-select" id="hudFontFamily">
+                <option value="Inter">Inter</option>
+                <option value="JetBrains Mono">JetBrains Mono</option>
+                <option value="Arial">Arial</option>
+              </select>
+              <input type="number" class="hud-select" id="hudFontSize" style="width: 48px;" min="6" max="72" value="12">
+              <button class="hud-btn" id="hudBoldBtn"><strong>B</strong></button>
+            </div>
+
+            <div id="hudBarcodeControls" style="display: none; align-items: center; gap: 4px;">
+              <select class="hud-select" id="hudBarcodeFormat">
+                <option value="CODE128">Code 128 (Estándar)</option>
+                <option value="EAN13">EAN-13 (Comercio)</option>
+                <option value="UPCA">UPC-A (Retail USA)</option>
+                <option value="CODE39">Code 39</option>
+              </select>
+            </div>
+
+            <div class="hud-divider"></div>
+            <span style="font-size: 10px; color: var(--accent-cyan); font-family: var(--font-mono); padding: 0 4px;">{{ Enlazado }}</span>
+          </div>
+
+          <!-- Interactive Canvas Stage Resizers (Ajuste directo de tamaño) -->
+          <div class="stage-resizer stage-resizer-e" id="stageResizerE" title="Arrastrar para ajustar ancho"></div>
+          <div class="stage-resizer stage-resizer-s" id="stageResizerS" title="Arrastrar para ajustar alto"></div>
+          <div class="stage-resizer stage-resizer-se" id="stageResizerSE" title="Arrastrar para ajustar tamaño del lienzo">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+              <path d="M8 2 L10 2 L10 10 L2 10 L2 8 L8 8 Z" opacity="0.7"/>
+              <path d="M5 5 L7 5 L7 7 L5 7 Z" opacity="0.4"/>
+            </svg>
+          </div>
+          <div class="stage-resizer-tooltip" id="stageResizerTooltip">100 × 150 mm</div>
+
+        </div>
       </div>
     </div>
   </main>
@@ -363,13 +381,34 @@
           <div class="form-grid-2">
             <div class="input-with-label">
               <span class="input-prefix">Ancho mm</span>
-              <input type="number" class="num-input" id="labelWidthMm" value="100">
+              <input type="number" step="1" min="15" max="500" class="num-input" id="labelWidthMm" value="100">
             </div>
             <div class="input-with-label">
               <span class="input-prefix">Alto mm</span>
-              <input type="number" class="num-input" id="labelHeightMm" value="150">
+              <input type="number" step="1" min="15" max="500" class="num-input" id="labelHeightMm" value="150">
             </div>
           </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button class="btn-secondary" id="btnToggleOrientation" style="flex: 1; justify-content: center; font-size: 11px; padding: 6px 8px;">
+              <span id="orientationIcon">🔄</span>
+              <span id="orientationLabel">Cambiar Orientación</span>
+            </button>
+          </div>
+
+          <div class="section-header" style="margin-top: 12px;">
+            <span>Tamaño Predefinido</span>
+          </div>
+          <select class="select-input" id="labelPresetSelect">
+            <option value="custom">-- Medida Personalizada --</option>
+            <option value="100x150" selected>100 × 150 mm (4×6" Envío Estándar)</option>
+            <option value="76.2x50.8">76.2 × 50.8 mm (3×2" Logística)</option>
+            <option value="50.8x25.4">50.8 × 25.4 mm (2×1" Almacén / Piezas)</option>
+            <option value="101.6x101.6">101.6 × 101.6 mm (4×4" Cuadrada)</option>
+            <option value="50x30">50 × 30 mm (Retail / Precio)</option>
+            <option value="80x50">80 × 50 mm (Identificación)</option>
+            <option value="215.9x279.4">215.9 × 279.4 mm (Carta / Letter Pliego)</option>
+          </select>
         </div>
 
         <div class="inspector-section">

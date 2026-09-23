@@ -19,6 +19,12 @@ class App {
       onElementUpdate: (el) => {
         this.updateInspectorValues(el);
         this.docManager?.setUnsavedChanges(true);
+      },
+      onCanvasResize: ({ widthMm, heightMm }) => {
+        this.updateInspectorLabelSettings();
+        this.updateCanvasDimBadge();
+        this.syncPresetSelect(widthMm, heightMm);
+        this.docManager?.setUnsavedChanges(true);
       }
     });
 
@@ -33,6 +39,9 @@ class App {
     } else {
       this.canvasEngine.loadTemplate(TEMPLATES[this.currentTemplateId]);
     }
+
+    this.updateCanvasDimBadge();
+    this.syncPresetSelect(this.canvasEngine.currentTemplate?.widthMm, this.canvasEngine.currentTemplate?.heightMm);
 
     // 2. Setup Data Drawer & Table
     this.renderDataTable();
@@ -180,13 +189,18 @@ class App {
 
     // Zoom buttons
     document.getElementById('zoomInBtn')?.addEventListener('click', () => {
-      this.canvasEngine.setZoom(this.canvasEngine.zoom + 0.15);
+      this.canvasEngine.setZoom(this.canvasEngine.zoom * 1.15);
     });
     document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
-      this.canvasEngine.setZoom(this.canvasEngine.zoom - 0.15);
+      this.canvasEngine.setZoom(this.canvasEngine.zoom / 1.15);
     });
     document.getElementById('zoomFitBtn')?.addEventListener('click', () => {
-      this.canvasEngine.setZoom(1.0);
+      this.canvasEngine.fitToScreen();
+    });
+
+    // Canvas Dimensions Badge in Topbar (switches to Label tab)
+    document.getElementById('canvasDimBadge')?.addEventListener('click', () => {
+      document.querySelector('.tab-btn[data-tab="label"]')?.click();
     });
 
     // Left Ribbon Creation Tools
@@ -428,6 +442,56 @@ class App {
     // Delete Element button in inspector
     document.getElementById('deleteElementBtn')?.addEventListener('click', () => {
       this.canvasEngine.deleteSelectedElement();
+    });
+
+    // ------------------------------------------------------------------------
+    // Label / Canvas Dimensions and Settings
+    // ------------------------------------------------------------------------
+    const onCanvasDimInput = () => {
+      const w = parseFloat(document.getElementById('labelWidthMm')?.value);
+      const h = parseFloat(document.getElementById('labelHeightMm')?.value);
+      if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
+        this.canvasEngine.setCanvasSize(w, h);
+        this.updateCanvasDimBadge();
+        this.syncPresetSelect(w, h);
+        this.docManager?.setUnsavedChanges(true);
+      }
+    };
+    document.getElementById('labelWidthMm')?.addEventListener('input', onCanvasDimInput);
+    document.getElementById('labelHeightMm')?.addEventListener('input', onCanvasDimInput);
+
+    // Label Preset Dropdown
+    document.getElementById('labelPresetSelect')?.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val && val !== 'custom' && val.includes('x')) {
+        const [w, h] = val.split('x').map(parseFloat);
+        this.canvasEngine.setCanvasSize(w, h);
+        this.updateInspectorLabelSettings();
+        this.updateCanvasDimBadge();
+        this.docManager?.setUnsavedChanges(true);
+      }
+    });
+
+    // Toggle Orientation Button
+    document.getElementById('btnToggleOrientation')?.addEventListener('click', () => {
+      const t = this.canvasEngine.currentTemplate;
+      if (t) {
+        const newW = t.heightMm;
+        const newH = t.widthMm;
+        this.canvasEngine.setCanvasSize(newW, newH);
+        this.updateInspectorLabelSettings();
+        this.updateCanvasDimBadge();
+        this.syncPresetSelect(newW, newH);
+        this.docManager?.setUnsavedChanges(true);
+      }
+    });
+
+    // DPI Selector
+    document.getElementById('labelDpi')?.addEventListener('change', (e) => {
+      if (this.canvasEngine.currentTemplate) {
+        this.canvasEngine.currentTemplate.dpi = parseInt(e.target.value, 10) || 203;
+        this.docManager?.setUnsavedChanges(true);
+      }
     });
   }
 

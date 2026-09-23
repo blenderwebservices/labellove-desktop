@@ -177,6 +177,31 @@
   font-size: 11px;
   padding: 0 6px;
   color: var(--text-main);
+  min-width: 38px;
+  text-align: center;
+}
+
+/* Canvas Dimension Badge Button in Topbar */
+.canvas-dim-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.canvas-dim-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
 }
 
 /* Action Buttons */

@@ -17,6 +17,12 @@ export class CanvasEngine {
     this.guideX = document.getElementById('magneticGuideX');
     this.guideY = document.getElementById('magneticGuideY');
 
+    this.world = document.getElementById('canvasWorld');
+    this.resizerSE = document.getElementById('stageResizerSE');
+    this.resizerE = document.getElementById('stageResizerE');
+    this.resizerS = document.getElementById('stageResizerS');
+    this.resizerTooltip = document.getElementById('stageResizerTooltip');
+
     this.dataStore = options.dataStore;
     this.currentTemplate = null;
     this.elements = [];
@@ -35,8 +41,19 @@ export class CanvasEngine {
     this.dragStart = { x: 0, y: 0 };
     this.elementStart = { xMm: 0, yMm: 0, wMm: 0, hMm: 0 };
 
+    // Pan state (Inkscape style middle-click or space-drag)
+    this.isPanning = false;
+    this.panStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
+    this.isSpacePressed = false;
+
+    // Stage Resize state (Canvas size direct adjustment)
+    this.isResizingStage = false;
+    this.stageResizeHandle = null;
+    this.stageResizeStart = { x: 0, y: 0, wMm: 0, hMm: 0 };
+
     this.onSelectionChange = options.onSelectionChange || (() => {});
     this.onElementUpdate = options.onElementUpdate || (() => {});
+    this.onCanvasResize = options.onCanvasResize || (() => {});
 
     this.initEvents();
   }
@@ -51,7 +68,12 @@ export class CanvasEngine {
 
     this.updateStageSize();
     this.renderElements();
-    this.renderRulers();
+
+    // Center in viewport and render rulers
+    setTimeout(() => {
+      this.centerCanvas();
+      this.renderRulers();
+    }, 40);
   }
 
   updateStageSize() {
@@ -66,8 +88,38 @@ export class CanvasEngine {
     this.stage.className = `label-stage substrate-${this.currentTemplate.substrate || 'thermal'}`;
   }
 
+  centerCanvas() {
+    if (!this.viewport || !this.stage) return;
+    const stageRect = this.stage.getBoundingClientRect();
+    const vpRect = this.viewport.getBoundingClientRect();
+
+    const stageCenterX = stageRect.left + stageRect.width / 2;
+    const stageCenterY = stageRect.top + stageRect.height / 2;
+    const vpCenterX = vpRect.left + vpRect.width / 2;
+    const vpCenterY = vpRect.top + vpRect.height / 2;
+
+    this.viewport.scrollLeft += (stageCenterX - vpCenterX);
+    this.viewport.scrollTop += (stageCenterY - vpCenterY);
+    this.renderRulers();
+  }
+
+  fitToScreen() {
+    if (!this.currentTemplate || !this.viewport) return;
+    const availW = Math.max(180, this.viewport.clientWidth - 120);
+    const availH = Math.max(180, this.viewport.clientHeight - 120);
+
+    const naturalW = this.currentTemplate.widthMm * this.pxPerMm;
+    const naturalH = this.currentTemplate.heightMm * this.pxPerMm;
+
+    const zoomFactor = Math.min(availW / naturalW, availH / naturalH);
+    const targetZoom = Math.max(0.2, Math.min(4.0, zoomFactor * 0.95));
+
+    this.setZoom(targetZoom);
+    setTimeout(() => this.centerCanvas(), 25);
+  }
+
   setZoom(zoomFactor) {
-    this.zoom = Math.max(0.3, Math.min(3.0, zoomFactor));
+    this.zoom = Math.max(0.2, Math.min(5.0, zoomFactor));
     this.updateStageSize();
     this.renderElements();
     this.renderRulers();
@@ -76,6 +128,75 @@ export class CanvasEngine {
 
     const label = document.getElementById('zoomLevelLabel');
     if (label) label.textContent = `${Math.round(this.zoom * 100)}%`;
+  }
+
+  /**
+   * Inkscape-Style Zoom: Anchored directly at pointer coordinates (clientX, clientY)
+   */
+  zoomAtPoint(newZoomFactor, clientX, clientY) {
+    if (!this.viewport || !this.stage) return;
+    const targetZoom = Math.max(0.2, Math.min(5.0, newZoomFactor));
+    if (Math.abs(targetZoom - this.zoom) < 0.001) return;
+
+    const vpRect = this.viewport.getBoundingClientRect();
+    const stageRect = this.stage.getBoundingClientRect();
+
+    // If clientX/clientY not provided, use viewport center
+    const pointerX = clientX !== undefined ? clientX : (vpRect.left + vpRect.width / 2);
+    const pointerY = clientY !== undefined ? clientY : (vpRect.top + vpRect.height / 2);
+
+    // Pointer offset in mm from stage top-left before zoom
+    const offsetMmX = (pointerX - stageRect.left) / (this.pxPerMm * this.zoom);
+    const offsetMmY = (pointerY - stageRect.top) / (this.pxPerMm * this.zoom);
+
+    // Pointer position inside viewport box
+    const pointerVpX = pointerX - vpRect.left;
+    const pointerVpY = pointerY - vpRect.top;
+
+    this.zoom = targetZoom;
+    this.updateStageSize();
+    this.renderElements();
+    this.updateTransformer();
+    this.updateHUD();
+
+    const label = document.getElementById('zoomLevelLabel');
+    if (label) label.textContent = `${Math.round(this.zoom * 100)}%`;
+
+    // Recalculate scroll so pointer remains on exact same mm position
+    const stageWorldLeft = this.stage.offsetLeft;
+    const stageWorldTop = this.stage.offsetTop;
+
+    const pointWorldX = stageWorldLeft + (offsetMmX * this.pxPerMm * this.zoom);
+    const pointWorldY = stageWorldTop + (offsetMmY * this.pxPerMm * this.zoom);
+
+    this.viewport.scrollLeft = pointWorldX - pointerVpX;
+    this.viewport.scrollTop = pointWorldY - pointerVpY;
+
+    this.renderRulers();
+  }
+
+  /**
+   * Adjust Canvas Size (Ancho / Alto mm)
+   */
+  setCanvasSize(widthMm, heightMm, options = {}) {
+    if (!this.currentTemplate) return;
+    const clampedW = Math.max(15, Math.min(600, Math.round(widthMm * 10) / 10));
+    const clampedH = Math.max(15, Math.min(600, Math.round(heightMm * 10) / 10));
+
+    this.currentTemplate.widthMm = clampedW;
+    this.currentTemplate.heightMm = clampedH;
+
+    this.updateStageSize();
+    this.renderRulers();
+    this.updateTransformer();
+    this.updateHUD();
+
+    if (!options.silent) {
+      this.onCanvasResize({
+        widthMm: clampedW,
+        heightMm: clampedH
+      });
+    }
   }
 
   setSubstrate(substrateType) {
@@ -406,74 +527,242 @@ export class CanvasEngine {
   }
 
   /**
-   * Draw high precision millimeter rulers on the top and left canvas
+   * Draw high precision millimeter rulers on the top and left canvas,
+   * accurately synchronized with the stage origin (0 mm = stage top-left)
    */
   renderRulers() {
     const canvasH = document.getElementById('rulerCanvasH');
     const canvasV = document.getElementById('rulerCanvasV');
-    if (!canvasH || !canvasV) return;
+    if (!canvasH || !canvasV || !this.stage || !this.viewport) return;
 
     const ctxH = canvasH.getContext('2d');
     const ctxV = canvasV.getContext('2d');
 
-    // Size canvas accurately for device pixel ratio
-    canvasH.width = canvasH.parentElement.clientWidth;
+    const vpRect = this.viewport.getBoundingClientRect();
+    const stageRect = this.stage.getBoundingClientRect();
+
+    // Stage origin relative to rulers
+    const originX = stageRect.left - vpRect.left;
+    const originY = stageRect.top - vpRect.top;
+
+    const hWidth = canvasH.parentElement.clientWidth;
+    const vHeight = canvasV.parentElement.clientHeight;
+
+    canvasH.width = hWidth;
     canvasH.height = 24;
     canvasV.width = 24;
-    canvasV.height = canvasV.parentElement.clientHeight;
+    canvasV.height = vHeight;
 
     ctxH.clearRect(0, 0, canvasH.width, canvasH.height);
     ctxV.clearRect(0, 0, canvasV.width, canvasV.height);
 
-    ctxH.fillStyle = '#64748b';
-    ctxH.font = '9px JetBrains Mono, monospace';
-    ctxV.fillStyle = '#64748b';
-    ctxV.font = '9px JetBrains Mono, monospace';
-
     const mmInPx = this.pxPerMm * this.zoom;
+    if (mmInPx <= 0) return;
+
+    // Highlight document boundary background on rulers
+    if (this.currentTemplate) {
+      const stageW = this.currentTemplate.widthMm * mmInPx;
+      const stageH = this.currentTemplate.heightMm * mmInPx;
+
+      ctxH.fillStyle = 'rgba(99, 102, 241, 0.12)';
+      ctxH.fillRect(originX, 0, stageW, 24);
+
+      ctxV.fillStyle = 'rgba(99, 102, 241, 0.12)';
+      ctxV.fillRect(0, originY, 24, stageH);
+    }
+
+    // Determine interval for numbers (5, 10, 20, 50 mm)
+    let majorInterval = 10;
+    if (mmInPx < 1.5) majorInterval = 50;
+    else if (mmInPx < 2.8) majorInterval = 20;
+    else if (mmInPx > 8.0) majorInterval = 5;
+
+    const minorInterval = majorInterval / 2;
 
     // Horizontal Ruler
-    for (let mm = 0; mm < 400; mm += 1) {
-      const x = mm * mmInPx;
-      if (x > canvasH.width) break;
+    const minMmH = Math.floor(-originX / mmInPx);
+    const maxMmH = Math.ceil((hWidth - originX) / mmInPx);
+    const startMmH = Math.floor(minMmH / majorInterval) * majorInterval;
 
-      if (mm % 10 === 0) {
+    ctxH.font = '9px JetBrains Mono, monospace';
+    for (let mm = startMmH; mm <= maxMmH; mm += 1) {
+      const x = Math.round(originX + mm * mmInPx);
+      if (x < 0 || x > hWidth) continue;
+
+      if (mm % majorInterval === 0) {
+        ctxH.fillStyle = (mm === 0 || (this.currentTemplate && mm === this.currentTemplate.widthMm)) ? '#38bdf8' : '#94a3b8';
         ctxH.fillRect(x, 10, 1, 14);
         ctxH.fillText(`${mm}`, x + 3, 18);
-      } else if (mm % 5 === 0) {
+      } else if (mm % minorInterval === 0) {
+        ctxH.fillStyle = '#64748b';
         ctxH.fillRect(x, 15, 1, 9);
-      } else {
+      } else if (mmInPx >= 3.0) {
+        ctxH.fillStyle = '#475569';
         ctxH.fillRect(x, 19, 1, 5);
       }
     }
 
     // Vertical Ruler
-    for (let mm = 0; mm < 400; mm += 1) {
-      const y = mm * mmInPx;
-      if (y > canvasV.height) break;
+    const minMmV = Math.floor(-originY / mmInPx);
+    const maxMmV = Math.ceil((vHeight - originY) / mmInPx);
+    const startMmV = Math.floor(minMmV / majorInterval) * majorInterval;
 
-      if (mm % 10 === 0) {
+    ctxV.font = '9px JetBrains Mono, monospace';
+    for (let mm = startMmV; mm <= maxMmV; mm += 1) {
+      const y = Math.round(originY + mm * mmInPx);
+      if (y < 0 || y > vHeight) continue;
+
+      if (mm % majorInterval === 0) {
+        ctxV.fillStyle = (mm === 0 || (this.currentTemplate && mm === this.currentTemplate.heightMm)) ? '#38bdf8' : '#94a3b8';
         ctxV.fillRect(10, y, 14, 1);
         ctxV.save();
-        ctxV.translate(2, y + 10);
+        ctxV.translate(2, y + 9);
         ctxV.fillText(`${mm}`, 0, 0);
         ctxV.restore();
-      } else if (mm % 5 === 0) {
+      } else if (mm % minorInterval === 0) {
+        ctxV.fillStyle = '#64748b';
         ctxV.fillRect(15, y, 9, 1);
-      } else {
+      } else if (mmInPx >= 3.0) {
+        ctxV.fillStyle = '#475569';
         ctxV.fillRect(19, y, 5, 1);
       }
     }
   }
 
+  setSpacePan(isPressed) {
+    this.isSpacePressed = isPressed;
+    if (this.viewport) {
+      this.viewport.classList.toggle('panning', isPressed && !this.isPanning);
+    }
+  }
+
+  onPanMouseDown(e) {
+    // Middle button (1) or Space + Left click (0)
+    if (e.button === 1 || (e.button === 0 && this.isSpacePressed)) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.isPanning = true;
+      this.panStart = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: this.viewport.scrollLeft,
+        scrollTop: this.viewport.scrollTop
+      };
+      this.viewport.classList.add('is-panning');
+
+      window.addEventListener('mousemove', this.onPanMouseMove);
+      window.addEventListener('mouseup', this.onPanMouseUp);
+    }
+  }
+
+  onPanMouseMove = (e) => {
+    if (!this.isPanning) return;
+    const dx = e.clientX - this.panStart.x;
+    const dy = e.clientY - this.panStart.y;
+    this.viewport.scrollLeft = this.panStart.scrollLeft - dx;
+    this.viewport.scrollTop = this.panStart.scrollTop - dy;
+    this.renderRulers();
+  };
+
+  onPanMouseUp = () => {
+    this.isPanning = false;
+    this.viewport.classList.remove('is-panning');
+    this.viewport.classList.toggle('panning', this.isSpacePressed);
+    window.removeEventListener('mousemove', this.onPanMouseMove);
+    window.removeEventListener('mouseup', this.onPanMouseUp);
+  };
+
+  onStageResizeMouseDown(e, handle) {
+    if (e.button !== 0 || !this.currentTemplate) return;
+    e.stopPropagation();
+    e.preventDefault();
+
+    this.isResizingStage = true;
+    this.stageResizeHandle = handle;
+    this.stageResizeStart = {
+      x: e.clientX,
+      y: e.clientY,
+      wMm: this.currentTemplate.widthMm,
+      hMm: this.currentTemplate.heightMm
+    };
+
+    if (this.resizerTooltip) {
+      this.resizerTooltip.classList.add('is-visible');
+      this.resizerTooltip.textContent = `📐 ${this.currentTemplate.widthMm.toFixed(1)} × ${this.currentTemplate.heightMm.toFixed(1)} mm`;
+    }
+
+    window.addEventListener('mousemove', this.onStageResizeMouseMove);
+    window.addEventListener('mouseup', this.onStageResizeMouseUp);
+  }
+
+  onStageResizeMouseMove = (e) => {
+    if (!this.isResizingStage) return;
+    const dxPx = e.clientX - this.stageResizeStart.x;
+    const dyPx = e.clientY - this.stageResizeStart.y;
+    const dxMm = dxPx / (this.pxPerMm * this.zoom);
+    const dyMm = dyPx / (this.pxPerMm * this.zoom);
+
+    let newW = this.stageResizeStart.wMm;
+    let newH = this.stageResizeStart.hMm;
+
+    if (this.stageResizeHandle.includes('e')) {
+      newW += dxMm;
+    }
+    if (this.stageResizeHandle.includes('s')) {
+      newH += dyMm;
+    }
+
+    const snap = e.shiftKey ? 0.5 : 1.0;
+    newW = Math.max(20, Math.round(newW / snap) * snap);
+    newH = Math.max(20, Math.round(newH / snap) * snap);
+
+    this.setCanvasSize(newW, newH);
+
+    if (this.resizerTooltip) {
+      this.resizerTooltip.textContent = `📐 ${newW.toFixed(1)} × ${newH.toFixed(1)} mm`;
+    }
+  };
+
+  onStageResizeMouseUp = () => {
+    this.isResizingStage = false;
+    this.stageResizeHandle = null;
+    if (this.resizerTooltip) {
+      this.resizerTooltip.classList.remove('is-visible');
+    }
+    window.removeEventListener('mousemove', this.onStageResizeMouseMove);
+    window.removeEventListener('mouseup', this.onStageResizeMouseUp);
+    this.renderElements();
+  };
+
   initEvents() {
     // Canvas background click to deselect
     if (this.viewport) {
       this.viewport.addEventListener('mousedown', (e) => {
-        if (e.target === this.viewport || e.target === this.stage || e.target === this.elementsLayer) {
+        // If it's a pan trigger, let pan handle it
+        if (e.button === 1 || (e.button === 0 && this.isSpacePressed)) {
+          this.onPanMouseDown(e);
+          return;
+        }
+
+        if (e.target === this.viewport || e.target === this.world || e.target === this.stage || e.target === this.elementsLayer) {
           this.selectElement(null);
         }
       });
+
+      // Synchronize rulers with scrolling
+      this.viewport.addEventListener('scroll', () => {
+        this.renderRulers();
+      });
+
+      // Inkscape-style Cmd / Ctrl + Wheel Zoom & Shift + Wheel Pan
+      this.viewport.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          const delta = e.deltaY;
+          const factor = delta < 0 ? 1.15 : (1 / 1.15);
+          this.zoomAtPoint(this.zoom * factor, e.clientX, e.clientY);
+        }
+      }, { passive: false });
 
       // Mouse tracking for ruler indicators
       this.viewport.addEventListener('mousemove', (e) => {
@@ -486,7 +775,12 @@ export class CanvasEngine {
       });
     }
 
-    // Connect handles
+    // Connect Stage Resizers
+    this.resizerSE?.addEventListener('mousedown', (e) => this.onStageResizeMouseDown(e, 'se'));
+    this.resizerE?.addEventListener('mousedown', (e) => this.onStageResizeMouseDown(e, 'e'));
+    this.resizerS?.addEventListener('mousedown', (e) => this.onStageResizeMouseDown(e, 's'));
+
+    // Connect transformer element handles
     const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
     handles.forEach(h => {
       const handleEl = document.getElementById(`handle-${h}`);
