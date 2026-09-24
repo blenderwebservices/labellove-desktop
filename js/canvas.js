@@ -559,15 +559,22 @@ export class CanvasEngine {
     const mmInPx = this.pxPerMm * this.zoom;
     if (mmInPx <= 0) return;
 
+    const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+    const highlightColor = isLight ? '#0284c7' : '#38bdf8';
+    const mainColor = isLight ? '#475569' : '#94a3b8';
+    const minorColor = isLight ? '#94a3b8' : '#64748b';
+    const subMinorColor = isLight ? '#cbd5e1' : '#475569';
+    const boundaryFill = isLight ? 'rgba(79, 70, 229, 0.10)' : 'rgba(99, 102, 241, 0.12)';
+
     // Highlight document boundary background on rulers
     if (this.currentTemplate) {
       const stageW = this.currentTemplate.widthMm * mmInPx;
       const stageH = this.currentTemplate.heightMm * mmInPx;
 
-      ctxH.fillStyle = 'rgba(99, 102, 241, 0.12)';
+      ctxH.fillStyle = boundaryFill;
       ctxH.fillRect(originX, 0, stageW, 24);
 
-      ctxV.fillStyle = 'rgba(99, 102, 241, 0.12)';
+      ctxV.fillStyle = boundaryFill;
       ctxV.fillRect(0, originY, 24, stageH);
     }
 
@@ -590,14 +597,14 @@ export class CanvasEngine {
       if (x < 0 || x > hWidth) continue;
 
       if (mm % majorInterval === 0) {
-        ctxH.fillStyle = (mm === 0 || (this.currentTemplate && mm === this.currentTemplate.widthMm)) ? '#38bdf8' : '#94a3b8';
+        ctxH.fillStyle = (mm === 0 || (this.currentTemplate && mm === this.currentTemplate.widthMm)) ? highlightColor : mainColor;
         ctxH.fillRect(x, 10, 1, 14);
         ctxH.fillText(`${mm}`, x + 3, 18);
       } else if (mm % minorInterval === 0) {
-        ctxH.fillStyle = '#64748b';
+        ctxH.fillStyle = minorColor;
         ctxH.fillRect(x, 15, 1, 9);
       } else if (mmInPx >= 3.0) {
-        ctxH.fillStyle = '#475569';
+        ctxH.fillStyle = subMinorColor;
         ctxH.fillRect(x, 19, 1, 5);
       }
     }
@@ -613,17 +620,17 @@ export class CanvasEngine {
       if (y < 0 || y > vHeight) continue;
 
       if (mm % majorInterval === 0) {
-        ctxV.fillStyle = (mm === 0 || (this.currentTemplate && mm === this.currentTemplate.heightMm)) ? '#38bdf8' : '#94a3b8';
+        ctxV.fillStyle = (mm === 0 || (this.currentTemplate && mm === this.currentTemplate.heightMm)) ? highlightColor : mainColor;
         ctxV.fillRect(10, y, 14, 1);
         ctxV.save();
         ctxV.translate(2, y + 9);
         ctxV.fillText(`${mm}`, 0, 0);
         ctxV.restore();
       } else if (mm % minorInterval === 0) {
-        ctxV.fillStyle = '#64748b';
+        ctxV.fillStyle = minorColor;
         ctxV.fillRect(15, y, 9, 1);
       } else if (mmInPx >= 3.0) {
-        ctxV.fillStyle = '#475569';
+        ctxV.fillStyle = subMinorColor;
         ctxV.fillRect(19, y, 5, 1);
       }
     }

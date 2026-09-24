@@ -4,7 +4,7 @@
 
 import { DataStore } from './data-store.js';
 import { CanvasEngine } from './canvas.js';
-import { TEMPLATES } from './templates.js';
+import { TEMPLATES, STANDARD_PRESETS } from './templates.js';
 import { ZPLGenerator } from './zpl-generator.js';
 import { BarcodeEngine } from './barcode-engine.js';
 import { DocumentManager } from './document-manager.js';
@@ -73,18 +73,20 @@ class App {
     // Document File Operations (Nuevo, Abrir, Guardar, Exportar)
     // ------------------------------------------------------------------------
     document.getElementById('btnNewDoc')?.addEventListener('click', () => {
-      this.docManager.createNewDocument(this.currentTemplateId);
+      this.handleNewDocumentRequest();
     });
 
     const openMenuBtn = document.getElementById('btnOpenMenu');
     const openMenuDropdown = document.getElementById('openMenuDropdown');
     openMenuBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
+      document.getElementById('themeDropdown')?.classList.remove('is-open');
       openMenuDropdown?.classList.toggle('is-open');
     });
 
     document.addEventListener('click', () => {
       openMenuDropdown?.classList.remove('is-open');
+      document.getElementById('themeDropdown')?.classList.remove('is-open');
     });
 
     // Recent Projects Modal
@@ -140,16 +142,31 @@ class App {
     // Setup Drag & Drop
     this.setupDragAndDrop();
 
+    // Setup New Job & Unsaved Changes Modal Events
+    this.setupNewJobModalEvents();
+
+    // Setup Excel / CSV Multi-Sheet Import Events
+    this.setupExcelImportEvents();
+
+    // Setup Theme Manager (Claro / Oscuro / Sistema)
+    this.setupThemeManager();
+
     // Template Selector
     const templateSelect = document.getElementById('templateSelect');
     if (templateSelect) {
       templateSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'custom') {
+          this.handleNewDocumentRequest();
+          return;
+        }
         this.currentTemplateId = e.target.value;
         const template = TEMPLATES[this.currentTemplateId];
-        this.canvasEngine.loadTemplate(template);
-        this.updateInspectorLabelSettings();
-        this.updateSegmentedControl(template.type || 'roll');
-        this.docManager.setUnsavedChanges(true);
+        if (template) {
+          this.canvasEngine.loadTemplate(template);
+          this.updateInspectorLabelSettings();
+          this.updateSegmentedControl(template.type || 'roll');
+          this.docManager.setUnsavedChanges(true);
+        }
       });
     }
 
@@ -770,7 +787,7 @@ class App {
       // Cmd+N / Ctrl+N (Nueva etiqueta)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        this.docManager.createNewDocument(this.currentTemplateId);
+        this.handleNewDocumentRequest();
         return;
       }
 
@@ -792,6 +809,9 @@ class App {
         document.getElementById('printModal')?.classList.remove('is-open');
         document.getElementById('recentProjectsModal')?.classList.remove('is-open');
         document.getElementById('openMenuDropdown')?.classList.remove('is-open');
+        document.getElementById('unsavedChangesModal')?.classList.remove('is-open');
+        document.getElementById('newJobModal')?.classList.remove('is-open');
+        document.getElementById('excelImportModal')?.classList.remove('is-open');
       }
 
       // Arrow keys nudging
@@ -972,10 +992,852 @@ class App {
     });
   }
 
+  // ------------------------------------------------------------------------
+  // New Document & Confirmation Modal Flow
+  // ------------------------------------------------------------------------
+  handleNewDocumentRequest() {
+    if (this.docManager.hasUnsavedChanges) {
+      this.openUnsavedChangesModal();
+    } else {
+      this.openNewJobModal();
+    }
+  }
+
+  openUnsavedChangesModal() {
+    const modal = document.getElementById('unsavedChangesModal');
+    if (!modal) return;
+
+    const nameInput = document.querySelector('.project-name-input');
+    const docName = nameInput ? nameInput.value.trim() : 'Etiqueta actual';
+    const desc = document.getElementById('unsavedModalDesc');
+    if (desc) {
+      desc.innerHTML = `El trabajo actual "<strong>${this.escapeHtml(docName)}</strong>" tiene modificaciones que no has guardado. Si continúas sin guardar, los cambios se perderán.`;
+    }
+
+    modal.classList.add('is-open');
+  }
+
+  closeUnsavedChangesModal() {
+    document.getElementById('unsavedChangesModal')?.classList.remove('is-open');
+  }
+
+  openNewJobModal() {
+    this.closeUnsavedChangesModal();
+    const modal = document.getElementById('newJobModal');
+    if (!modal) return;
+
+    this.switchNewJobTab('blank');
+    this.renderStandardPresetsGrid();
+    this.renderTemplatesCatalog('all', '');
+    this.updateBlankCanvasPreview();
+
+    modal.classList.add('is-open');
+  }
+
+  closeNewJobModal() {
+    document.getElementById('newJobModal')?.classList.remove('is-open');
+  }
+
+  switchNewJobTab(tabName) {
+    document.querySelectorAll('.new-job-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+
+    const isBlank = tabName === 'blank';
+    document.getElementById('tabContentBlank')?.classList.toggle('active', isBlank);
+    document.getElementById('tabContentTemplates')?.classList.toggle('active', !isBlank);
+
+    const submitBtn = document.getElementById('btnCreateBlankSubmit');
+    if (submitBtn) {
+      submitBtn.style.display = isBlank ? 'inline-flex' : 'none';
+    }
+  }
+
+  renderStandardPresetsGrid() {
+    const grid = document.getElementById('standardPresetsGrid');
+    if (!grid) return;
+
+    grid.innerHTML = STANDARD_PRESETS.map((p, idx) => `
+      <div class="preset-card ${idx === 0 ? 'active' : ''}" data-id="${p.id}" tabindex="0">
+        <div class="preset-card-top">
+          <span class="preset-card-icon">${p.icon || '🏷️'}</span>
+          ${p.badge ? `<span class="preset-badge">${p.badge}</span>` : ''}
+        </div>
+        <div class="preset-card-name">${this.escapeHtml(p.name)}</div>
+        <div class="preset-card-dims">${p.dims}</div>
+        <div class="preset-card-desc">${this.escapeHtml(p.desc)}</div>
+      </div>
+    `).join('');
+
+    // Attach click events
+    grid.querySelectorAll('.preset-card').forEach(card => {
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+
+        const presetId = card.dataset.id;
+        const preset = STANDARD_PRESETS.find(p => p.id === presetId);
+        if (!preset) return;
+
+        const nameInput = document.getElementById('newJobName');
+        const wInput = document.getElementById('newJobWidth');
+        const hInput = document.getElementById('newJobHeight');
+        const typeSelect = document.getElementById('newJobType');
+        const substrateSelect = document.getElementById('newJobSubstrate');
+        const dpiSelect = document.getElementById('newJobDpi');
+        const orientSelect = document.getElementById('newJobOrientation');
+
+        if (nameInput) nameInput.value = preset.name;
+        if (wInput) wInput.value = preset.widthMm;
+        if (hInput) hInput.value = preset.heightMm;
+        if (typeSelect) typeSelect.value = preset.type || 'roll';
+        if (substrateSelect) substrateSelect.value = preset.substrate || 'thermal';
+        if (dpiSelect) dpiSelect.value = preset.dpi || 300;
+        if (orientSelect) {
+          orientSelect.value = (preset.widthMm >= preset.heightMm) ? 'landscape' : 'portrait';
+        }
+
+        this.updateBlankCanvasPreview();
+      });
+    });
+  }
+
+  updateBlankCanvasPreview() {
+    const wInput = document.getElementById('newJobWidth');
+    const hInput = document.getElementById('newJobHeight');
+    const substrateSelect = document.getElementById('newJobSubstrate');
+    const dpiSelect = document.getElementById('newJobDpi');
+    const orientSelect = document.getElementById('newJobOrientation');
+
+    const widthMm = parseFloat(wInput?.value) || 100;
+    const heightMm = parseFloat(hInput?.value) || 150;
+    const substrate = substrateSelect?.value || 'thermal';
+    const dpi = dpiSelect?.value || '300';
+    const orientation = orientSelect?.value || (widthMm >= heightMm ? 'landscape' : 'portrait');
+
+    // Converted inches
+    const wInch = (widthMm / 25.4).toFixed(2);
+    const hInch = (heightMm / 25.4).toFixed(2);
+    const wInchEl = document.getElementById('widthInchesLabel');
+    const hInchEl = document.getElementById('heightInchesLabel');
+    if (wInchEl) wInchEl.textContent = `${wInch} in`;
+    if (hInchEl) hInchEl.textContent = `${hInch} in`;
+
+    // Preview Tags
+    const dimTag = document.getElementById('blankPreviewDimTag');
+    if (dimTag) dimTag.textContent = `${widthMm} × ${heightMm} mm (${wInch}" × ${hInch}")`;
+
+    const aspectTag = document.getElementById('previewAspectTag');
+    if (aspectTag) {
+      const ratio = widthMm / heightMm;
+      const ratioStr = ratio >= 1 ? `${ratio.toFixed(2)}:1` : `1:${(1 / ratio).toFixed(2)}`;
+      aspectTag.textContent = `${ratioStr} (${orientation === 'portrait' ? 'Vertical' : 'Horizontal'})`;
+    }
+
+    const subTag = document.getElementById('previewSubstrateTag');
+    if (subTag) {
+      const names = {
+        thermal: 'Térmico Directo',
+        gloss: 'Blanco Brillante',
+        kraft: 'Papel Kraft',
+        clear: 'Transparente'
+      };
+      subTag.textContent = `Sustrato: ${names[substrate] || substrate}`;
+    }
+
+    const dpiTag = document.getElementById('previewDpiTag');
+    if (dpiTag) dpiTag.textContent = `${dpi} DPI`;
+
+    // Stage scaling in container (max width 190, max height 140)
+    const stage = document.getElementById('blankPreviewStage');
+    if (stage) {
+      const maxW = 190;
+      const maxH = 140;
+      const ratio = widthMm / heightMm;
+
+      let drawW, drawH;
+      if (ratio >= maxW / maxH) {
+        drawW = maxW;
+        drawH = Math.max(30, Math.round(maxW / ratio));
+      } else {
+        drawH = maxH;
+        drawW = Math.max(30, Math.round(maxH * ratio));
+      }
+
+      stage.style.width = `${drawW}px`;
+      stage.style.height = `${drawH}px`;
+
+      // Substrate visual simulation
+      if (substrate === 'kraft') {
+        stage.style.background = '#d2b48c';
+      } else if (substrate === 'clear') {
+        stage.style.background = 'repeating-conic-gradient(#cbd5e1 0% 25%, #f1f5f9 0% 50%) 50% / 12px 12px';
+      } else if (substrate === 'gloss') {
+        stage.style.background = 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)';
+      } else {
+        stage.style.background = '#ffffff';
+      }
+    }
+  }
+
+  renderTemplatesCatalog(category = 'all', searchQuery = '') {
+    const grid = document.getElementById('templatesCatalogGrid');
+    if (!grid) return;
+
+    const query = (searchQuery || '').trim().toLowerCase();
+    const templateEntries = Object.entries(TEMPLATES);
+
+    const filtered = templateEntries.filter(([key, t]) => {
+      // Category check
+      if (category !== 'all' && t.category !== category) {
+        return false;
+      }
+      // Query check
+      if (query) {
+        const text = `${t.name} ${t.badge || ''} ${t.description || ''} ${t.dimensionsLabel || ''} ${key}`.toLowerCase();
+        return text.includes(query);
+      }
+      return true;
+    });
+
+    const badgeCount = document.getElementById('templatesCountBadge');
+    if (badgeCount) badgeCount.textContent = filtered.length;
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `
+        <div class="recent-empty-state" style="grid-column: 1 / -1; padding: 30px;">
+          <div class="recent-empty-icon">🔍</div>
+          <h4 style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">No se encontraron plantillas</h4>
+          <p style="font-size: 12px; color: var(--text-muted);">Prueba con otra palabra clave o selecciona otra categoría.</p>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(([key, t]) => {
+      const miniSvg = this.generateTemplateMiniSvg(t);
+      const labelsCount = t.labelsPerSheet ? `${t.labelsPerSheet} etiquetas / hoja` : (t.type === 'sheet' ? 'Pliego' : 'Rollo continuo');
+
+      return `
+        <div class="template-card" data-template-id="${key}">
+          <div class="template-card-preview">
+            ${t.badge ? `<span class="template-badge">${this.escapeHtml(t.badge)}</span>` : ''}
+            <span class="template-labels-per-sheet">${labelsCount}</span>
+            ${miniSvg}
+          </div>
+          <div class="template-card-body">
+            <div class="template-card-title">${this.escapeHtml(t.name)}</div>
+            <div class="template-card-dims">${t.dimensionsLabel || `${t.widthMm} × ${t.heightMm} mm`}</div>
+            <div class="template-card-desc">${this.escapeHtml(t.description || '')}</div>
+          </div>
+          <div class="template-card-actions">
+            <button class="btn-template-use" data-template-id="${key}">
+              <span>✨</span>
+              <span>Usar Esta Plantilla</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach click events on use buttons
+    grid.querySelectorAll('.btn-template-use').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.templateId;
+        this.closeNewJobModal();
+        this.docManager.createNewDocument(id);
+      });
+    });
+  }
+
+  generateTemplateMiniSvg(template) {
+    if (template.type === 'sheet') {
+      const cols = template.cols || 2;
+      const rows = template.rows || 5;
+      const isCircle = template.id && template.id.includes('22807');
+      let cells = '';
+      const w = 120;
+      const h = 88;
+      const cellW = (w - (cols + 1) * 3) / cols;
+      const cellH = (h - (rows + 1) * 3) / rows;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = 3 + c * (cellW + 3);
+          const y = 3 + r * (cellH + 3);
+          if (isCircle) {
+            const rx = cellW / 2;
+            const ry = cellH / 2;
+            const rRad = Math.min(rx, ry);
+            cells += `<circle cx="${x + rx}" cy="${y + ry}" r="${rRad}" fill="rgba(99, 102, 241, 0.25)" stroke="#6366f1" stroke-width="0.8" />`;
+          } else {
+            cells += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" rx="1.5" fill="rgba(99, 102, 241, 0.18)" stroke="#6366f1" stroke-width="0.8" />`;
+          }
+        }
+      }
+      return `
+        <svg class="template-mini-svg" viewBox="0 0 120 88">
+          <rect x="0" y="0" width="120" height="88" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+          ${cells}
+        </svg>
+      `;
+    } else {
+      // Roll label preview
+      const isLandscape = (template.widthMm || 100) > (template.heightMm || 100);
+      const vbW = isLandscape ? 120 : 80;
+      const vbH = isLandscape ? 80 : 120;
+      return `
+        <svg class="template-mini-svg" viewBox="0 0 ${vbW} ${vbH}">
+          <rect x="2" y="2" width="${vbW - 4}" height="${vbH - 4}" rx="3" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2"/>
+          <line x1="8" y1="12" x2="${vbW - 8}" y2="12" stroke="#475569" stroke-width="2"/>
+          <rect x="8" y="18" width="${vbW * 0.4}" height="4" fill="#94a3b8" rx="1"/>
+          <rect x="8" y="26" width="${vbW * 0.7}" height="3" fill="#cbd5e1" rx="1"/>
+          <rect x="8" y="${vbH - 34}" width="${vbW - 16}" height="18" fill="none" stroke="#64748b" stroke-width="0.8"/>
+          <path d="M12 ${vbH - 30} v10 M15 ${vbH - 30} v10 M18 ${vbH - 30} v10 M22 ${vbH - 30} v10 M25 ${vbH - 30} v10 M29 ${vbH - 30} v10 M34 ${vbH - 30} v10 M38 ${vbH - 30} v10 M42 ${vbH - 30} v10 M46 ${vbH - 30} v10 M50 ${vbH - 30} v10 M55 ${vbH - 30} v10" stroke="#0f172a" stroke-width="1.2"/>
+        </svg>
+      `;
+    }
+  }
+
+  setupNewJobModalEvents() {
+    // Unsaved Changes Modal Events
+    document.getElementById('closeUnsavedModalBtn')?.addEventListener('click', () => {
+      this.closeUnsavedChangesModal();
+    });
+
+    document.getElementById('btnCancelUnsavedModal')?.addEventListener('click', () => {
+      this.closeUnsavedChangesModal();
+    });
+
+    document.getElementById('btnDiscardAndContinueNew')?.addEventListener('click', () => {
+      this.closeUnsavedChangesModal();
+      this.openNewJobModal();
+    });
+
+    document.getElementById('btnSaveAndContinueNew')?.addEventListener('click', async () => {
+      const saved = await this.docManager.saveToFile(false);
+      if (saved !== false) {
+        this.closeUnsavedChangesModal();
+        this.openNewJobModal();
+      }
+    });
+
+    // New Job Modal Close
+    document.getElementById('closeNewJobModalBtn')?.addEventListener('click', () => {
+      this.closeNewJobModal();
+    });
+    document.getElementById('cancelNewJobModalBtn')?.addEventListener('click', () => {
+      this.closeNewJobModal();
+    });
+
+    // Tab Switching
+    document.querySelectorAll('.new-job-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.switchNewJobTab(btn.dataset.tab);
+      });
+    });
+
+    // Live Blank Dimension & Property Updates
+    const wInput = document.getElementById('newJobWidth');
+    const hInput = document.getElementById('newJobHeight');
+    const orientSelect = document.getElementById('newJobOrientation');
+    const substrateSelect = document.getElementById('newJobSubstrate');
+    const dpiSelect = document.getElementById('newJobDpi');
+
+    wInput?.addEventListener('input', () => this.updateBlankCanvasPreview());
+    hInput?.addEventListener('input', () => this.updateBlankCanvasPreview());
+    substrateSelect?.addEventListener('change', () => this.updateBlankCanvasPreview());
+    dpiSelect?.addEventListener('change', () => this.updateBlankCanvasPreview());
+
+    // Swap Dimensions Button
+    document.getElementById('btnSwapDims')?.addEventListener('click', () => {
+      if (!wInput || !hInput) return;
+      const tmp = wInput.value;
+      wInput.value = hInput.value;
+      hInput.value = tmp;
+
+      if (orientSelect) {
+        orientSelect.value = parseFloat(wInput.value) >= parseFloat(hInput.value) ? 'landscape' : 'portrait';
+      }
+      this.updateBlankCanvasPreview();
+    });
+
+    orientSelect?.addEventListener('change', (e) => {
+      if (!wInput || !hInput) return;
+      const w = parseFloat(wInput.value) || 100;
+      const h = parseFloat(hInput.value) || 150;
+      if (e.target.value === 'landscape' && w < h) {
+        wInput.value = h;
+        hInput.value = w;
+      } else if (e.target.value === 'portrait' && w > h) {
+        wInput.value = h;
+        hInput.value = w;
+      }
+      this.updateBlankCanvasPreview();
+    });
+
+    // Create Blank Canvas Submit
+    document.getElementById('btnCreateBlankSubmit')?.addEventListener('click', () => {
+      const name = document.getElementById('newJobName')?.value || 'Nueva Etiqueta';
+      const widthMm = parseFloat(wInput?.value) || 100;
+      const heightMm = parseFloat(hInput?.value) || 150;
+      const type = document.getElementById('newJobType')?.value || 'roll';
+      const substrate = substrateSelect?.value || 'thermal';
+      const orientation = orientSelect?.value || 'portrait';
+      const dpi = parseInt(dpiSelect?.value, 10) || 300;
+
+      this.closeNewJobModal();
+      this.docManager.createNewBlankDocument({
+        name,
+        widthMm,
+        heightMm,
+        type,
+        substrate,
+        orientation,
+        dpi
+      });
+    });
+
+    // Templates Filter Category Pills
+    let currentCategory = 'all';
+    let currentSearchQuery = '';
+
+    document.querySelectorAll('#templateCategoryPills .cat-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#templateCategoryPills .cat-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentCategory = pill.dataset.cat || 'all';
+        this.renderTemplatesCatalog(currentCategory, currentSearchQuery);
+      });
+    });
+
+    // Templates Search Box
+    const searchInput = document.getElementById('templateSearchInput');
+    searchInput?.addEventListener('input', (e) => {
+      currentSearchQuery = e.target.value;
+      this.renderTemplatesCatalog(currentCategory, currentSearchQuery);
+    });
+  }
+
+  // ------------------------------------------------------------------------
+  // Excel / CSV Multi-Sheet Import Logic
+  // ------------------------------------------------------------------------
+  setupExcelImportEvents() {
+    const fileInput = document.getElementById('excelFileInput');
+    const importBtn = document.getElementById('btnImportExcel');
+    const chooseAnotherBtn = document.getElementById('btnChooseAnotherExcelFile');
+    const closeBtn = document.getElementById('closeExcelModalBtn');
+    const cancelBtn = document.getElementById('cancelExcelModalBtn');
+    const confirmBtn = document.getElementById('confirmExcelImportBtn');
+    const headersCheckbox = document.getElementById('excelHasHeadersCheckbox');
+    const drawerSheetSelect = document.getElementById('drawerSheetSelect');
+
+    // Trigger file picker
+    importBtn?.addEventListener('click', () => {
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+      }
+    });
+
+    chooseAnotherBtn?.addEventListener('click', () => {
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+      }
+    });
+
+    // File selected
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        this.processExcelFile(file);
+      }
+    });
+
+    // Close buttons
+    closeBtn?.addEventListener('click', () => this.closeExcelImportModal());
+    cancelBtn?.addEventListener('click', () => this.closeExcelImportModal());
+
+    // Toggle headers checkbox
+    headersCheckbox?.addEventListener('change', () => {
+      if (this.currentExcelWorkbook && this.activeImportSheetName) {
+        this.renderExcelSheetPreview(this.activeImportSheetName, headersCheckbox.checked);
+      }
+    });
+
+    // Confirm import button
+    confirmBtn?.addEventListener('click', () => {
+      this.confirmExcelImport();
+    });
+
+    // Drawer sheet select
+    drawerSheetSelect?.addEventListener('change', (e) => {
+      const sheetName = e.target.value;
+      if (this.dataStore.loadSheet(sheetName)) {
+        const selectedEl = this.canvasEngine.elements.find(el => el.id === this.canvasEngine.selectedElementId);
+        if (selectedEl) this.updateInspectorValues(selectedEl);
+        this.docManager.setUnsavedChanges(true);
+        this.docManager.showToast(`Hoja activa: ${sheetName}`, 'info');
+      }
+    });
+  }
+
+  processExcelFile(file) {
+    if (typeof XLSX === 'undefined') {
+      alert('La librería SheetJS para procesar Excel no está disponible en este momento. Revisa tu conexión a internet.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+          alert('El archivo no contiene hojas de cálculo válidas.');
+          return;
+        }
+
+        const parsedWorkbook = {
+          fileName: file.name,
+          fileSize: file.size,
+          sheetNames: workbook.SheetNames,
+          sheets: {}
+        };
+
+        workbook.SheetNames.forEach(sheetName => {
+          const worksheet = workbook.Sheets[sheetName];
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+          parsedWorkbook.sheets[sheetName] = {
+            rawRows: rawRows
+          };
+        });
+
+        this.currentExcelWorkbook = parsedWorkbook;
+        this.openExcelImportModal();
+      } catch (err) {
+        console.error('Error al procesar archivo Excel:', err);
+        alert(`Error al procesar el archivo Excel: ${err.message}`);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  openExcelImportModal(targetSheet = null) {
+    const modal = document.getElementById('excelImportModal');
+    if (!modal || !this.currentExcelWorkbook) return;
+
+    const wb = this.currentExcelWorkbook;
+    this.activeImportSheetName = targetSheet || wb.sheetNames[0];
+
+    // File info display
+    const nameEl = document.getElementById('excelFileNameDisplay');
+    const metaEl = document.getElementById('excelFileMetaDisplay');
+    if (nameEl) nameEl.textContent = wb.fileName;
+    if (metaEl) {
+      const sizeKb = (wb.fileSize / 1024).toFixed(1);
+      metaEl.textContent = `${sizeKb} KB • ${wb.sheetNames.length} hoja${wb.sheetNames.length > 1 ? 's' : ''} disponible${wb.sheetNames.length > 1 ? 's' : ''}`;
+    }
+
+    // Sheet Selector List
+    const sheetsList = document.getElementById('excelSheetsList');
+    if (sheetsList) {
+      sheetsList.innerHTML = wb.sheetNames.map((name) => {
+        const rowCount = Math.max(0, (wb.sheets[name].rawRows?.length || 1) - 1);
+        const isActive = name === this.activeImportSheetName;
+        return `
+          <button type="button" class="excel-sheet-pill ${isActive ? 'active' : ''}" data-sheet="${this.escapeHtml(name)}">
+            <span>📑</span>
+            <span>${this.escapeHtml(name)}</span>
+            <span class="excel-sheet-count-tag">${rowCount} filas</span>
+          </button>
+        `;
+      }).join('');
+
+      sheetsList.querySelectorAll('.excel-sheet-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          sheetsList.querySelectorAll('.excel-sheet-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          this.activeImportSheetName = pill.dataset.sheet;
+          const hasHeaders = document.getElementById('excelHasHeadersCheckbox')?.checked ?? true;
+          this.renderExcelSheetPreview(this.activeImportSheetName, hasHeaders);
+        });
+      });
+    }
+
+    const hasHeaders = document.getElementById('excelHasHeadersCheckbox')?.checked ?? true;
+    this.renderExcelSheetPreview(this.activeImportSheetName, hasHeaders);
+
+    modal.classList.add('is-open');
+  }
+
+  closeExcelImportModal() {
+    document.getElementById('excelImportModal')?.classList.remove('is-open');
+  }
+
+  renderExcelSheetPreview(sheetName, hasHeaders = true) {
+    const table = document.getElementById('excelPreviewTable');
+    const statsBadge = document.getElementById('excelSheetStatsBadge');
+    const summaryText = document.getElementById('excelImportSummaryText');
+    if (!table || !this.currentExcelWorkbook) return;
+
+    const sheetInfo = this.currentExcelWorkbook.sheets[sheetName];
+    if (!sheetInfo || !sheetInfo.rawRows) {
+      table.innerHTML = '<tbody><tr><td style="padding: 20px; text-align: center; color: var(--text-muted);">Hoja vacía</td></tr></tbody>';
+      return;
+    }
+
+    const rawRows = sheetInfo.rawRows;
+    if (rawRows.length === 0) {
+      table.innerHTML = '<tbody><tr><td style="padding: 20px; text-align: center; color: var(--text-muted);">Esta hoja no contiene datos.</td></tr></tbody>';
+      if (statsBadge) statsBadge.textContent = '0 columnas • 0 filas';
+      return;
+    }
+
+    let columns = [];
+    let records = [];
+
+    if (hasHeaders && rawRows.length > 0) {
+      const headerRow = rawRows[0];
+      columns = headerRow.map((cell, idx) => this.sanitizeColumnKey(String(cell), idx));
+
+      // Ensure unique column names
+      const seen = {};
+      columns = columns.map(c => {
+        if (!seen[c]) {
+          seen[c] = 1;
+          return c;
+        }
+        seen[c]++;
+        return `${c}_${seen[c]}`;
+      });
+
+      for (let r = 1; r < rawRows.length; r++) {
+        const rowData = rawRows[r];
+        if (!rowData || rowData.length === 0 || (rowData.length === 1 && rowData[0] === '')) continue;
+        const record = {};
+        columns.forEach((col, cIdx) => {
+          record[col] = rowData[cIdx] !== undefined ? String(rowData[cIdx]) : '';
+        });
+        records.push(record);
+      }
+    } else {
+      const maxCols = Math.max(...rawRows.map(r => r.length), 1);
+      for (let i = 0; i < maxCols; i++) {
+        columns.push(`col_${i + 1}`);
+      }
+      for (let r = 0; r < rawRows.length; r++) {
+        const rowData = rawRows[r];
+        if (!rowData || rowData.length === 0 || (rowData.length === 1 && rowData[0] === '')) continue;
+        const record = {};
+        columns.forEach((col, cIdx) => {
+          record[col] = rowData[cIdx] !== undefined ? String(rowData[cIdx]) : '';
+        });
+        records.push(record);
+      }
+    }
+
+    // Cache formatted columns & records into sheetInfo
+    sheetInfo.columns = columns;
+    sheetInfo.records = records;
+
+    if (statsBadge) {
+      statsBadge.textContent = `${columns.length} columnas • ${records.length} registros`;
+    }
+    if (summaryText) {
+      summaryText.textContent = `Se importarán ${records.length} registros con ${columns.length} campos desde la hoja "${sheetName}".`;
+    }
+
+    // Render Preview Table
+    let html = '<thead><tr><th style="width: 32px;">#</th>';
+    columns.forEach(c => {
+      html += `<th>{{ ${this.escapeHtml(c)} }}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    const previewRows = records.slice(0, 5);
+    previewRows.forEach((rec, idx) => {
+      html += `<tr><td style="color: var(--text-muted); font-family: var(--font-mono); font-weight: bold;">${idx + 1}</td>`;
+      columns.forEach(c => {
+        html += `<td>${this.escapeHtml(rec[c] || '')}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    if (records.length > 5) {
+      html += `<tr><td colspan="${columns.length + 1}" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 8px;">... y ${records.length - 5} registros adicionales que estarán disponibles al importar</td></tr>`;
+    }
+
+    html += '</tbody>';
+    table.innerHTML = html;
+  }
+
+  confirmExcelImport() {
+    if (!this.currentExcelWorkbook || !this.activeImportSheetName) return;
+
+    const sheetInfo = this.currentExcelWorkbook.sheets[this.activeImportSheetName];
+    if (!sheetInfo || !sheetInfo.columns || sheetInfo.columns.length === 0) {
+      alert('La hoja seleccionada no tiene columnas ni registros válidos para importar.');
+      return;
+    }
+
+    // Load into DataStore
+    this.dataStore.loadWorkbook(this.currentExcelWorkbook, this.activeImportSheetName);
+
+    // Update Drawer File Name Display
+    const drawerTitle = document.getElementById('dataDrawerFileName');
+    if (drawerTitle) {
+      drawerTitle.textContent = `DATA FLOW: ${this.currentExcelWorkbook.fileName}`;
+    }
+
+    // Update Drawer Sheet Select if multiple sheets exist
+    const sheetGroup = document.getElementById('drawerSheetSelectorGroup');
+    const sheetSelect = document.getElementById('drawerSheetSelect');
+    if (this.currentExcelWorkbook.sheetNames.length > 1 && sheetGroup && sheetSelect) {
+      sheetGroup.style.display = 'inline-flex';
+      sheetSelect.innerHTML = this.currentExcelWorkbook.sheetNames.map(name => `
+        <option value="${this.escapeHtml(name)}" ${name === this.activeImportSheetName ? 'selected' : ''}>
+          ${this.escapeHtml(name)} (${this.currentExcelWorkbook.sheets[name]?.records?.length || 0})
+        </option>
+      `).join('');
+    } else if (sheetGroup) {
+      sheetGroup.style.display = 'none';
+    }
+
+    // Refresh Inspector Field Bindings if element is selected
+    const selectedEl = this.canvasEngine.elements.find(el => el.id === this.canvasEngine.selectedElementId);
+    if (selectedEl) {
+      this.updateInspectorValues(selectedEl);
+    }
+
+    this.closeExcelImportModal();
+
+    // Mark project changes
+    this.docManager.setUnsavedChanges(true);
+    this.docManager.showToast(`✅ Hoja "${this.activeImportSheetName}" importada (${sheetInfo.records.length} registros)`, 'success');
+  }
+
+  sanitizeColumnKey(str, index) {
+    if (!str || typeof str !== 'string') return `col_${index + 1}`;
+    const clean = str.trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[\s\W-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return clean || `col_${index + 1}`;
+  }
+
   escapeHtml(str) {
     return (str || '').replace(/[&<>"']/g, (m) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[m]));
+  }
+
+  // ------------------------------------------------------------------------
+  // Theme Manager (Light / Dark / System)
+  // ------------------------------------------------------------------------
+  setupThemeManager() {
+    const THEME_STORAGE_KEY = 'labellove_theme_preference';
+    const themeBtn = document.getElementById('btnThemeToggle');
+    const themeDropdown = document.getElementById('themeDropdown');
+    const themeBtnIcon = document.getElementById('themeBtnIcon');
+    const themeBtnLabel = document.getElementById('themeBtnLabel');
+    const themeSystemSubLabel = document.getElementById('themeSystemSubLabel');
+    const themeOptions = document.querySelectorAll('.theme-option');
+
+    const mediaQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    const getSystemTheme = () => (mediaQuery && mediaQuery.matches ? 'dark' : 'light');
+
+    const applyTheme = (preference, showFeedback = false) => {
+      const resolvedTheme = preference === 'system' ? getSystemTheme() : preference;
+      document.documentElement.setAttribute('data-theme', resolvedTheme);
+      document.documentElement.setAttribute('data-theme-preference', preference);
+
+      // Update button icon & label
+      if (preference === 'system') {
+        if (themeBtnIcon) themeBtnIcon.textContent = '💻';
+        if (themeBtnLabel) themeBtnLabel.textContent = 'Auto';
+      } else if (preference === 'light') {
+        if (themeBtnIcon) themeBtnIcon.textContent = '☀️';
+        if (themeBtnLabel) themeBtnLabel.textContent = 'Claro';
+      } else {
+        if (themeBtnIcon) themeBtnIcon.textContent = '🌙';
+        if (themeBtnLabel) themeBtnLabel.textContent = 'Oscuro';
+      }
+
+      // Update system subtitle
+      if (themeSystemSubLabel) {
+        const sysMode = getSystemTheme() === 'dark' ? 'Oscuro' : 'Claro';
+        themeSystemSubLabel.textContent = `Automático (detectado: ${sysMode})`;
+      }
+
+      // Update active checks in dropdown
+      themeOptions.forEach(opt => {
+        const mode = opt.dataset.themeMode;
+        if (mode === preference) {
+          opt.classList.add('is-active');
+        } else {
+          opt.classList.remove('is-active');
+        }
+      });
+
+      // Save preference to localStorage
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, preference);
+      } catch (e) {}
+
+      // Re-render canvas rulers with new theme colors
+      if (this.canvasEngine && typeof this.canvasEngine.renderRulers === 'function') {
+        this.canvasEngine.renderRulers();
+      }
+
+      if (showFeedback && this.docManager) {
+        const labels = {
+          light: '☀️ Modo Claro activado',
+          dark: '🌙 Modo Oscuro activado',
+          system: `💻 Modo Sistema activado (${getSystemTheme() === 'dark' ? 'Oscuro' : 'Claro'})`
+        };
+        this.docManager.showToast(labels[preference] || 'Tema actualizado', 'info');
+      }
+    };
+
+    // Load initial preference
+    let savedPref = 'system';
+    try {
+      savedPref = localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+    } catch (e) {
+      savedPref = 'system';
+    }
+    applyTheme(savedPref, false);
+
+    // Listen for OS system theme changes
+    if (mediaQuery && typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', () => {
+        const currentPref = document.documentElement.getAttribute('data-theme-preference') || 'system';
+        if (currentPref === 'system') {
+          applyTheme('system', false);
+        }
+      });
+    }
+
+    // Toggle dropdown
+    themeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('openMenuDropdown')?.classList.remove('is-open');
+      themeDropdown?.classList.toggle('is-open');
+    });
+
+    // Option clicks
+    themeOptions.forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const mode = opt.dataset.themeMode;
+        applyTheme(mode, true);
+        themeDropdown?.classList.remove('is-open');
+      });
+    });
   }
 }
 

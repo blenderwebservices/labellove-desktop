@@ -64,6 +64,9 @@ export class DataStore {
     ];
 
     this.activeRecordIndex = 0;
+    this.workbook = null;
+    this.currentFileName = 'Ordenes_Envio_Septiembre.csv';
+    this.currentSheetName = 'General';
     this.listeners = [];
   }
 
@@ -159,5 +162,40 @@ export class DataStore {
     });
 
     return warnings;
+  }
+
+  /**
+   * Loads a parsed Excel / CSV workbook with multi-sheet support
+   */
+  loadWorkbook(workbookData, targetSheet = null) {
+    this.workbook = workbookData;
+    this.currentFileName = workbookData.fileName || 'datos.xlsx';
+    const sheetName = targetSheet || (workbookData.sheetNames && workbookData.sheetNames[0]) || 'Hoja1';
+    return this.loadSheet(sheetName);
+  }
+
+  /**
+   * Switches the active sheet in the data store
+   */
+  loadSheet(sheetName) {
+    if (!this.workbook || !this.workbook.sheets || !this.workbook.sheets[sheetName]) {
+      console.warn(`La hoja "${sheetName}" no existe en el libro cargado.`);
+      return false;
+    }
+
+    const sheet = this.workbook.sheets[sheetName];
+    this.currentSheetName = sheetName;
+    this.columns = Array.isArray(sheet.columns) ? [...sheet.columns] : [];
+    this.records = Array.isArray(sheet.records) ? JSON.parse(JSON.stringify(sheet.records)) : [];
+    this.activeRecordIndex = 0;
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Checks if current workbook has multiple sheets
+   */
+  hasMultiSheets() {
+    return Boolean(this.workbook && Array.isArray(this.workbook.sheetNames) && this.workbook.sheetNames.length > 1);
   }
 }

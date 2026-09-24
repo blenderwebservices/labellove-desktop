@@ -1,12 +1,172 @@
 /**
  * LabelLove - Templates & Presets Catalog
+ * Includes industrial roll templates, standard blank presets and Avery® catalog.
  */
 
+export const STANDARD_PRESETS = [
+  {
+    id: 'roll_4x6',
+    name: 'Rollo Envíos 4" × 6"',
+    dims: '100 × 150 mm',
+    widthMm: 100,
+    heightMm: 150,
+    type: 'roll',
+    substrate: 'thermal',
+    dpi: 203,
+    icon: '🖨️',
+    desc: 'Estándar de paquetería (FedEx, DHL, Estafeta, Zebra)',
+    badge: 'Top Popular'
+  },
+  {
+    id: 'roll_4x3',
+    name: 'Rollo Logística 4" × 3"',
+    dims: '102 × 76 mm',
+    widthMm: 102,
+    heightMm: 76,
+    type: 'roll',
+    substrate: 'thermal',
+    dpi: 203,
+    icon: '📦',
+    desc: 'Cajas, tarimas y control de almacén'
+  },
+  {
+    id: 'roll_50x30',
+    name: 'Rollo Retail 50 × 30 mm',
+    dims: '50 × 30 mm',
+    widthMm: 50,
+    heightMm: 30,
+    type: 'roll',
+    substrate: 'thermal',
+    dpi: 203,
+    icon: '🏷️',
+    desc: 'Código de barras EAN-13, SKU y precios de mostrador',
+    badge: 'Retail'
+  },
+  {
+    id: 'roll_50x50',
+    name: 'Rollo Cuadrado 2" × 2"',
+    dims: '50 × 50 mm',
+    widthMm: 50,
+    heightMm: 50,
+    type: 'roll',
+    substrate: 'thermal',
+    dpi: 203,
+    icon: '🔲',
+    desc: 'Códigos QR, inventario, activos y sellos'
+  },
+  {
+    id: 'roll_32x19',
+    name: 'Rollo Joyería 32 × 19 mm',
+    dims: '32 × 19 mm',
+    widthMm: 32,
+    heightMm: 19,
+    type: 'roll',
+    substrate: 'thermal',
+    dpi: 300,
+    icon: '💍',
+    desc: 'Etiquetas miniatura para bisutería y componentes finos'
+  },
+  {
+    id: 'roll_60x100',
+    name: 'Rollo Frasco / Botella',
+    dims: '60 × 100 mm',
+    widthMm: 60,
+    heightMm: 100,
+    type: 'roll',
+    substrate: 'gloss',
+    dpi: 300,
+    icon: '🍾',
+    desc: 'Botellas, cosméticos, alimentos artesanales y frascos'
+  },
+  {
+    id: 'sheet_avery_5160',
+    name: 'Pliego Avery® 5160',
+    dims: '66.6 × 25.4 mm (Carta)',
+    widthMm: 66.6,
+    heightMm: 25.4,
+    type: 'sheet',
+    substrate: 'gloss',
+    dpi: 300,
+    icon: '📄',
+    desc: '30 etiquetas por hoja Carta (2-5/8" × 1") correspondencia',
+    badge: 'Avery® 30'
+  },
+  {
+    id: 'sheet_avery_5163',
+    name: 'Pliego Avery® 5163',
+    dims: '101.6 × 50.8 mm (Carta)',
+    widthMm: 101.6,
+    heightMm: 50.8,
+    type: 'sheet',
+    substrate: 'gloss',
+    dpi: 300,
+    icon: '📮',
+    desc: '10 etiquetas por hoja Carta (4" × 2") para envíos y cajas',
+    badge: 'Avery® 10'
+  },
+  {
+    id: 'sheet_avery_5164',
+    name: 'Pliego Avery® 5164',
+    dims: '101.6 × 84.6 mm (Carta)',
+    widthMm: 101.6,
+    heightMm: 84.6,
+    type: 'sheet',
+    substrate: 'gloss',
+    dpi: 300,
+    icon: '📦',
+    desc: '6 etiquetas grandes por hoja Carta (4" × 3-1/3")',
+    badge: 'Avery® 6'
+  },
+  {
+    id: 'sheet_avery_22807',
+    name: 'Avery® 22807 Redonda 2"',
+    dims: '50.8 × 50.8 mm (Carta)',
+    widthMm: 50.8,
+    heightMm: 50.8,
+    type: 'sheet',
+    substrate: 'gloss',
+    dpi: 300,
+    icon: '⭕',
+    desc: '12 etiquetas circulares por hoja (2" diámetro)',
+    badge: 'Redonda'
+  },
+  {
+    id: 'sheet_letter',
+    name: 'Hoja Carta Completa',
+    dims: '215.9 × 279.4 mm',
+    widthMm: 215.9,
+    heightMm: 279.4,
+    type: 'sheet',
+    substrate: 'gloss',
+    dpi: 300,
+    icon: '📃',
+    desc: 'Tamaño US Letter estándar (8.5" × 11")'
+  },
+  {
+    id: 'sheet_a4',
+    name: 'Hoja A4 Completa',
+    dims: '210 × 297 mm',
+    widthMm: 210,
+    heightMm: 297,
+    type: 'sheet',
+    substrate: 'gloss',
+    dpi: 300,
+    icon: '📃',
+    desc: 'Tamaño ISO A4 internacional estándar'
+  }
+];
+
 export const TEMPLATES = {
+  // 1. Envío E-Commerce (Rollo 4x6")
   'shipping_4x6': {
     id: 'shipping_4x6',
-    name: 'Envío E-Commerce (4x6" / 100x150mm)',
-    type: 'roll', // roll or sheet
+    name: 'Envío E-Commerce Express (4x6" / 100x150mm)',
+    category: 'shipping',
+    badge: 'Rollo Térmico',
+    description: 'Etiqueta estándar de paquetería con remitente, destinatario, Code 128 y QR.',
+    dimensionsLabel: '100 × 150 mm (4" × 6")',
+    labelsPerSheet: null,
+    type: 'roll',
     widthMm: 100,
     heightMm: 150,
     dpi: 203,
@@ -176,7 +336,7 @@ export const TEMPLATES = {
         yMm: 120,
         widthMm: 48,
         heightMm: 6,
-        text: 'FECHA: 2026-09-23',
+        text: 'FECHA: 2026-09-24',
         fontSize: 9,
         fontWeight: 'normal',
         fontFamily: 'Inter',
@@ -198,9 +358,15 @@ export const TEMPLATES = {
     ]
   },
 
+  // 2. Retail & Almacén (50x30 mm)
   'warehouse_50x30': {
     id: 'warehouse_50x30',
     name: 'Almacén / Retail (50x30 mm)',
+    category: 'retail',
+    badge: 'Retail EAN',
+    description: 'Etiqueta compacta con SKU, código de barras EAN-13 y precio destacado.',
+    dimensionsLabel: '50 × 30 mm',
+    labelsPerSheet: null,
     type: 'roll',
     widthMm: 50,
     heightMm: 30,
@@ -249,16 +415,22 @@ export const TEMPLATES = {
     ]
   },
 
+  // 3. Avery 5160 / 8160 (Carta - 30 etiquetas)
   'avery_5160': {
     id: 'avery_5160',
-    name: 'Pliego Avery 5160 (Carta - 30 etiquetas)',
+    name: 'Avery® 5160 - Dirección Estándar (Carta - 30 etiquetas)',
+    category: 'avery',
+    badge: 'Avery® Carta',
+    description: 'El formato de dirección más popular del mundo. 3 columnas × 10 filas = 30 etiquetas por hoja.',
+    dimensionsLabel: '66.6 × 25.4 mm (2-5/8" × 1")',
+    labelsPerSheet: 30,
     type: 'sheet',
-    pageWidthMm: 215.9,  // Letter width (8.5 in)
-    pageHeightMm: 279.4, // Letter height (11 in)
+    pageWidthMm: 215.9,
+    pageHeightMm: 279.4,
     cols: 3,
     rows: 10,
-    labelWidthMm: 66.6,  // 2.625 in
-    labelHeightMm: 25.4, // 1.0 in
+    labelWidthMm: 66.6,
+    labelHeightMm: 25.4,
     marginLeftMm: 4.8,
     marginTopMm: 12.7,
     gapXMm: 3.1,
@@ -305,6 +477,709 @@ export const TEMPLATES = {
         heightMm: 16,
         value: '{{ tracking_code }}',
         field: 'tracking_code'
+      }
+    ]
+  },
+
+  // 4. Avery 5163 / 8163 (Carta - 10 etiquetas de envío)
+  'avery_5163': {
+    id: 'avery_5163',
+    name: 'Avery® 5163 - Envío & Paquetería (Carta - 10 etiquetas)',
+    category: 'avery',
+    badge: 'Avery® Carta',
+    description: 'Etiquetas de envío de 4" × 2" en pliego Carta. 2 columnas × 5 filas = 10 etiquetas.',
+    dimensionsLabel: '101.6 × 50.8 mm (4" × 2")',
+    labelsPerSheet: 10,
+    type: 'sheet',
+    pageWidthMm: 215.9,
+    pageHeightMm: 279.4,
+    cols: 2,
+    rows: 5,
+    labelWidthMm: 101.6,
+    labelHeightMm: 50.8,
+    marginLeftMm: 4.0,
+    marginTopMm: 12.7,
+    gapXMm: 4.7,
+    gapYMm: 0,
+    widthMm: 101.6,
+    heightMm: 50.8,
+    dpi: 300,
+    substrate: 'gloss',
+    elements: [
+      {
+        id: 'el-5163-rem',
+        type: 'text',
+        xMm: 5,
+        yMm: 4,
+        widthMm: 45,
+        heightMm: 7,
+        text: 'REMITENTE: Central Hub Logistics',
+        fontSize: 8,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'left'
+      },
+      {
+        id: 'el-5163-divider',
+        type: 'shape',
+        shapeType: 'line',
+        xMm: 5,
+        yMm: 11,
+        widthMm: 91,
+        heightMm: 1
+      },
+      {
+        id: 'el-5163-dest',
+        type: 'text',
+        xMm: 5,
+        yMm: 14,
+        widthMm: 55,
+        heightMm: 6,
+        text: 'ENTREGAR A:',
+        fontSize: 7,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'left'
+      },
+      {
+        id: 'el-5163-name',
+        type: 'text',
+        xMm: 5,
+        yMm: 20,
+        widthMm: 55,
+        heightMm: 7,
+        text: '{{ nombre_cliente }}',
+        fontSize: 12,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'left',
+        field: 'nombre_cliente'
+      },
+      {
+        id: 'el-5163-address',
+        type: 'text',
+        xMm: 5,
+        yMm: 27,
+        widthMm: 55,
+        heightMm: 10,
+        text: '{{ direccion }}\n{{ ciudad }}',
+        fontSize: 9,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'left',
+        field: 'direccion'
+      },
+      {
+        id: 'el-5163-barcode',
+        type: 'barcode',
+        xMm: 5,
+        yMm: 38,
+        widthMm: 55,
+        heightMm: 11,
+        format: 'CODE128',
+        value: '{{ tracking_code }}',
+        field: 'tracking_code',
+        displayValue: true
+      },
+      {
+        id: 'el-5163-qr',
+        type: 'qr',
+        xMm: 68,
+        yMm: 15,
+        widthMm: 28,
+        heightMm: 28,
+        value: '{{ tracking_code }}',
+        field: 'tracking_code'
+      }
+    ]
+  },
+
+  // 5. Avery 5164 - Envío Grande (Carta - 6 etiquetas)
+  'avery_5164': {
+    id: 'avery_5164',
+    name: 'Avery® 5164 - Cajas & Envíos Grandes (Carta - 6 etiquetas)',
+    category: 'avery',
+    badge: 'Avery® Carta',
+    description: 'Etiquetas de 4" × 3-1/3" ideales para cajas grandes, tarimas y paquetes voluminosos. 2 columnas × 3 filas.',
+    dimensionsLabel: '101.6 × 84.6 mm (4" × 3-1/3")',
+    labelsPerSheet: 6,
+    type: 'sheet',
+    pageWidthMm: 215.9,
+    pageHeightMm: 279.4,
+    cols: 2,
+    rows: 3,
+    labelWidthMm: 101.6,
+    labelHeightMm: 84.6,
+    marginLeftMm: 4.0,
+    marginTopMm: 12.7,
+    gapXMm: 4.7,
+    gapYMm: 0,
+    widthMm: 101.6,
+    heightMm: 84.6,
+    dpi: 300,
+    substrate: 'gloss',
+    elements: [
+      {
+        id: 'el-5164-head',
+        type: 'text',
+        xMm: 6,
+        yMm: 6,
+        widthMm: 50,
+        heightMm: 7,
+        text: '📦 CARGO EXPRESS PRIORITY',
+        fontSize: 10,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'left'
+      },
+      {
+        id: 'el-5164-line1',
+        type: 'shape',
+        shapeType: 'line',
+        xMm: 6,
+        yMm: 14,
+        widthMm: 90,
+        heightMm: 1
+      },
+      {
+        id: 'el-5164-dest-title',
+        type: 'text',
+        xMm: 6,
+        yMm: 17,
+        widthMm: 40,
+        heightMm: 5,
+        text: 'CONSIGNATARIO / DESTINATARIO:',
+        fontSize: 8,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'left'
+      },
+      {
+        id: 'el-5164-dest-name',
+        type: 'text',
+        xMm: 6,
+        yMm: 23,
+        widthMm: 90,
+        heightMm: 8,
+        text: '{{ nombre_cliente }}',
+        fontSize: 14,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'left',
+        field: 'nombre_cliente'
+      },
+      {
+        id: 'el-5164-dest-addr',
+        type: 'text',
+        xMm: 6,
+        yMm: 32,
+        widthMm: 58,
+        heightMm: 12,
+        text: '{{ direccion }}\n{{ ciudad }}',
+        fontSize: 10,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'left',
+        field: 'direccion'
+      },
+      {
+        id: 'el-5164-qr',
+        type: 'qr',
+        xMm: 68,
+        yMm: 28,
+        widthMm: 26,
+        heightMm: 26,
+        value: '{{ tracking_code }}',
+        field: 'tracking_code'
+      },
+      {
+        id: 'el-5164-barcode',
+        type: 'barcode',
+        xMm: 10,
+        yMm: 56,
+        widthMm: 82,
+        heightMm: 22,
+        format: 'CODE128',
+        value: '{{ tracking_code }}',
+        field: 'tracking_code',
+        displayValue: true
+      }
+    ]
+  },
+
+  // 6. Avery 22807 - Redonda 2" (Carta - 12 etiquetas)
+  'avery_22807': {
+    id: 'avery_22807',
+    name: 'Avery® 22807 - Redonda 2" (Carta - 12 etiquetas)',
+    category: 'special',
+    badge: 'Avery® Redonda',
+    description: 'Etiquetas circulares de 50.8 mm (2") para sellos, velas, tapas de frasco y branding artesanal. 3 columnas × 4 filas.',
+    dimensionsLabel: '50.8 × 50.8 mm (2" Diámetro)',
+    labelsPerSheet: 12,
+    type: 'sheet',
+    pageWidthMm: 215.9,
+    pageHeightMm: 279.4,
+    cols: 3,
+    rows: 4,
+    labelWidthMm: 50.8,
+    labelHeightMm: 50.8,
+    marginLeftMm: 15.9,
+    marginTopMm: 19.0,
+    gapXMm: 17.5,
+    gapYMm: 15.9,
+    widthMm: 50.8,
+    heightMm: 50.8,
+    dpi: 300,
+    substrate: 'gloss',
+    elements: [
+      {
+        id: 'el-circ-border',
+        type: 'shape',
+        shapeType: 'circle',
+        xMm: 1.5,
+        yMm: 1.5,
+        widthMm: 47.8,
+        heightMm: 47.8
+      },
+      {
+        id: 'el-circ-title',
+        type: 'text',
+        xMm: 4,
+        yMm: 7,
+        widthMm: 42.8,
+        heightMm: 6,
+        text: '★ ARTISAN LAB ★',
+        fontSize: 10,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-circ-prod',
+        type: 'text',
+        xMm: 4,
+        yMm: 14,
+        widthMm: 42.8,
+        heightMm: 7,
+        text: 'ORGANIC BLEND',
+        fontSize: 11,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-circ-sub',
+        type: 'text',
+        xMm: 4,
+        yMm: 21,
+        widthMm: 42.8,
+        heightMm: 5,
+        text: '100% HECHO A MANO',
+        fontSize: 8,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-circ-qr',
+        type: 'qr',
+        xMm: 17.4,
+        yMm: 27,
+        widthMm: 16,
+        heightMm: 16,
+        value: 'https://labellove.test/artisan'
+      },
+      {
+        id: 'el-circ-batch',
+        type: 'text',
+        xMm: 4,
+        yMm: 43.5,
+        widthMm: 42.8,
+        heightMm: 4,
+        text: 'LOTE #2026-A • 250 ML',
+        fontSize: 7,
+        fontWeight: 'normal',
+        fontFamily: 'JetBrains Mono',
+        textAlign: 'center'
+      }
+    ]
+  },
+
+  // 7. Avery 5395 - Gafete de Identificación (Carta - 8 etiquetas)
+  'avery_5395': {
+    id: 'avery_5395',
+    name: 'Avery® 5395 - Gafete de Identificación (Carta - 8 etiquetas)',
+    category: 'special',
+    badge: 'Avery® Gafete',
+    description: 'Gafetes de visitante, acreditaciones para eventos y credenciales autoadhesivas. 2 columnas × 4 filas.',
+    dimensionsLabel: '59 × 86 mm (2-1/3" × 3-3/8")',
+    labelsPerSheet: 8,
+    type: 'sheet',
+    pageWidthMm: 215.9,
+    pageHeightMm: 279.4,
+    cols: 2,
+    rows: 4,
+    labelWidthMm: 59.0,
+    labelHeightMm: 86.0,
+    marginLeftMm: 15.0,
+    marginTopMm: 15.0,
+    gapXMm: 10.0,
+    gapYMm: 0,
+    widthMm: 59.0,
+    heightMm: 86.0,
+    dpi: 300,
+    substrate: 'gloss',
+    elements: [
+      {
+        id: 'el-badge-banner',
+        type: 'shape',
+        shapeType: 'rect',
+        xMm: 4,
+        yMm: 4,
+        widthMm: 51,
+        heightMm: 14
+      },
+      {
+        id: 'el-badge-title',
+        type: 'text',
+        xMm: 5,
+        yMm: 7,
+        widthMm: 49,
+        heightMm: 8,
+        text: 'VISITANTE • ACCESO',
+        fontSize: 12,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-badge-greeting',
+        type: 'text',
+        xMm: 5,
+        yMm: 22,
+        widthMm: 49,
+        heightMm: 6,
+        text: 'HOLA, MI NOMBRE ES',
+        fontSize: 8,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-badge-name',
+        type: 'text',
+        xMm: 4,
+        yMm: 30,
+        widthMm: 51,
+        heightMm: 10,
+        text: '{{ nombre_cliente }}',
+        fontSize: 14,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center',
+        field: 'nombre_cliente'
+      },
+      {
+        id: 'el-badge-org',
+        type: 'text',
+        xMm: 4,
+        yMm: 42,
+        widthMm: 51,
+        heightMm: 7,
+        text: 'LabelLove Summit 2026',
+        fontSize: 10,
+        fontWeight: '600',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-badge-qr',
+        type: 'qr',
+        xMm: 18.5,
+        yMm: 51,
+        widthMm: 22,
+        heightMm: 22,
+        value: 'PASS:{{ tracking_code }}',
+        field: 'tracking_code'
+      },
+      {
+        id: 'el-badge-id',
+        type: 'text',
+        xMm: 4,
+        yMm: 75,
+        widthMm: 51,
+        heightMm: 5,
+        text: 'ID: {{ orden_id }}',
+        fontSize: 9,
+        fontWeight: 'normal',
+        fontFamily: 'JetBrains Mono',
+        textAlign: 'center',
+        field: 'orden_id'
+      }
+    ]
+  },
+
+  // 8. Activo Fijo & QR Cuadrado (50x50 mm)
+  'inventory_50x50': {
+    id: 'inventory_50x50',
+    name: 'Activo Fijo & QR (50x50 mm)',
+    category: 'special',
+    badge: 'Inventario',
+    description: 'Etiqueta cuadrada para identificación patrimonial, control de activos y escaneo móvil rápido.',
+    dimensionsLabel: '50 × 50 mm (2" × 2")',
+    labelsPerSheet: null,
+    type: 'roll',
+    widthMm: 50,
+    heightMm: 50,
+    dpi: 203,
+    substrate: 'thermal',
+    elements: [
+      {
+        id: 'el-inv-head',
+        type: 'text',
+        xMm: 3,
+        yMm: 3,
+        widthMm: 44,
+        heightMm: 6,
+        text: 'PROPIEDAD DE LA EMPRESA',
+        fontSize: 8,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-inv-qr',
+        type: 'qr',
+        xMm: 12,
+        yMm: 10,
+        widthMm: 26,
+        heightMm: 26,
+        value: 'ACTIVO-{{ sku }}',
+        field: 'sku'
+      },
+      {
+        id: 'el-inv-code',
+        type: 'text',
+        xMm: 3,
+        yMm: 38,
+        widthMm: 44,
+        heightMm: 5,
+        text: 'ID: {{ sku }}',
+        fontSize: 10,
+        fontWeight: 'bold',
+        fontFamily: 'JetBrains Mono',
+        textAlign: 'center',
+        field: 'sku'
+      },
+      {
+        id: 'el-inv-warn',
+        type: 'text',
+        xMm: 3,
+        yMm: 44,
+        widthMm: 44,
+        heightMm: 4,
+        text: 'NO RETIRAR ESTA ETIQUETA',
+        fontSize: 7,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      }
+    ]
+  },
+
+  // 9. Botella & Frasco Artesanal (60x100 mm)
+  'bottle_60x100': {
+    id: 'bottle_60x100',
+    name: 'Etiqueta Frasco / Botella (60x100 mm)',
+    category: 'retail',
+    badge: 'Producto',
+    description: 'Formato vertical alargado para envases cilíndricos, conservas, botellas de vino o cosmética.',
+    dimensionsLabel: '60 × 100 mm',
+    labelsPerSheet: null,
+    type: 'roll',
+    widthMm: 60,
+    heightMm: 100,
+    dpi: 300,
+    substrate: 'gloss',
+    elements: [
+      {
+        id: 'el-bot-brand',
+        type: 'text',
+        xMm: 5,
+        yMm: 8,
+        widthMm: 50,
+        heightMm: 7,
+        text: 'BODEGA ARTESANAL',
+        fontSize: 11,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-bot-line1',
+        type: 'shape',
+        shapeType: 'line',
+        xMm: 10,
+        yMm: 17,
+        widthMm: 40,
+        heightMm: 1
+      },
+      {
+        id: 'el-bot-name',
+        type: 'text',
+        xMm: 5,
+        yMm: 22,
+        widthMm: 50,
+        heightMm: 10,
+        text: 'RESERVA ESPECIAL',
+        fontSize: 13,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-bot-desc',
+        type: 'text',
+        xMm: 5,
+        yMm: 34,
+        widthMm: 50,
+        heightMm: 14,
+        text: 'Elaboración tradicional en pequeños lotes con ingredientes 100% naturales seleccionados.',
+        fontSize: 8,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-bot-vol',
+        type: 'text',
+        xMm: 5,
+        yMm: 51,
+        widthMm: 50,
+        heightMm: 6,
+        text: 'CONT. NET. 500 ML • 12% VOL.',
+        fontSize: 9,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'center'
+      },
+      {
+        id: 'el-bot-barcode',
+        type: 'barcode',
+        xMm: 6,
+        yMm: 60,
+        widthMm: 48,
+        heightMm: 18,
+        format: 'EAN13',
+        value: '750103131130',
+        displayValue: true
+      },
+      {
+        id: 'el-bot-footer',
+        type: 'text',
+        xMm: 5,
+        yMm: 83,
+        widthMm: 50,
+        heightMm: 10,
+        text: 'LOTE: {{ orden_id }}\nCADUCIDAD: 2027-12',
+        fontSize: 8,
+        fontWeight: 'normal',
+        fontFamily: 'JetBrains Mono',
+        textAlign: 'center',
+        field: 'orden_id'
+      }
+    ]
+  },
+
+  // 10. Logística 4x3" (102x76 mm)
+  'shipping_4x3': {
+    id: 'shipping_4x3',
+    name: 'Logística & Almacén (4x3" / 102x76mm)',
+    category: 'shipping',
+    badge: 'Logística',
+    description: 'Etiqueta horizontal para tarimas, estanterías y cajas de distribución intermedia.',
+    dimensionsLabel: '102 × 76 mm (4" × 3")',
+    labelsPerSheet: null,
+    type: 'roll',
+    widthMm: 102,
+    heightMm: 76,
+    dpi: 203,
+    substrate: 'thermal',
+    elements: [
+      {
+        id: 'el-4x3-zone',
+        type: 'text',
+        xMm: 6,
+        yMm: 6,
+        widthMm: 45,
+        heightMm: 8,
+        text: 'ZONA NORTE • D-04',
+        fontSize: 12,
+        fontWeight: 'bold',
+        fontFamily: 'Inter',
+        textAlign: 'left'
+      },
+      {
+        id: 'el-4x3-route',
+        type: 'text',
+        xMm: 55,
+        yMm: 6,
+        widthMm: 41,
+        heightMm: 8,
+        text: 'RUTA EXP-99',
+        fontSize: 12,
+        fontWeight: 'bold',
+        fontFamily: 'JetBrains Mono',
+        textAlign: 'right'
+      },
+      {
+        id: 'el-4x3-line',
+        type: 'shape',
+        shapeType: 'line',
+        xMm: 6,
+        yMm: 16,
+        widthMm: 90,
+        heightMm: 1
+      },
+      {
+        id: 'el-4x3-sku',
+        type: 'text',
+        xMm: 6,
+        yMm: 20,
+        widthMm: 60,
+        heightMm: 7,
+        text: 'MATERIAL: {{ sku }}',
+        fontSize: 11,
+        fontWeight: 'bold',
+        fontFamily: 'JetBrains Mono',
+        textAlign: 'left',
+        field: 'sku'
+      },
+      {
+        id: 'el-4x3-barcode',
+        type: 'barcode',
+        xMm: 8,
+        yMm: 30,
+        widthMm: 86,
+        heightMm: 24,
+        format: 'CODE128',
+        value: '{{ tracking_code }}',
+        field: 'tracking_code',
+        displayValue: true
+      },
+      {
+        id: 'el-4x3-dest',
+        type: 'text',
+        xMm: 6,
+        yMm: 59,
+        widthMm: 90,
+        heightMm: 10,
+        text: 'CLIENTE: {{ nombre_cliente }} • {{ ciudad }}',
+        fontSize: 10,
+        fontWeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'left',
+        field: 'nombre_cliente'
       }
     ]
   }

@@ -27,7 +27,7 @@ export class DocumentManager {
     const canvas = this.app.canvasEngine;
     const store = this.app.dataStore;
     const template = canvas.currentTemplate || {};
-    const nameInput = document.querySelector('.project-name-input');
+    const nameInput = typeof document !== 'undefined' ? document.querySelector('.project-name-input') : null;
     const docName = customName || (nameInput ? nameInput.value.trim() : 'Etiqueta sin título');
 
     const now = new Date().toISOString();
@@ -317,32 +317,95 @@ export class DocumentManager {
   }
 
   /**
-   * Resets canvas to a new blank label or template
+   * Resets canvas to a new blank label with custom specifications
    */
-  createNewDocument(templateId = 'shipping_4x6') {
-    if (this.hasUnsavedChanges) {
-      const confirmNew = confirm('Tienes cambios sin guardar. ¿Deseas crear una nueva etiqueta y descartar los cambios actuales?');
-      if (!confirmNew) return;
-    }
+  createNewBlankDocument(config = {}) {
+    const widthMm = parseFloat(config.widthMm) || 100;
+    const heightMm = parseFloat(config.heightMm) || 150;
+    const docName = (config.name || `Etiqueta ${widthMm}x${heightMm} mm`).trim();
+
+    const blankTemplate = {
+      name: docName,
+      widthMm: widthMm,
+      heightMm: heightMm,
+      type: config.type || 'roll',
+      substrate: config.substrate || 'thermal',
+      orientation: config.orientation || 'portrait',
+      dpi: parseInt(config.dpi, 10) || 300,
+      safeMarginMm: config.safeMarginMm !== undefined ? parseFloat(config.safeMarginMm) : 1.5,
+      sheetConfig: config.sheetConfig || null,
+      elements: []
+    };
 
     this.currentDocumentId = 'lbl_' + Math.random().toString(36).substring(2, 10);
     this.currentCreatedAt = new Date().toISOString();
     this.currentFileName = null;
     this.fileHandle = null;
 
-    const nameInput = document.querySelector('.project-name-input');
+    const nameInput = typeof document !== 'undefined' ? document.querySelector('.project-name-input') : null;
     if (nameInput) {
-      nameInput.value = 'Nueva Etiqueta';
+      nameInput.value = docName;
     }
+
+    this.app.currentTemplateId = 'custom';
+    this.app.canvasEngine.loadTemplate(blankTemplate);
+
+    if (blankTemplate.substrate) {
+      this.app.canvasEngine.setSubstrate(blankTemplate.substrate);
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('.substrate-pill').forEach(pill => {
+          pill.classList.toggle('active', pill.dataset.substrate === blankTemplate.substrate);
+        });
+      }
+    }
+
+    this.app.updateSegmentedControl(blankTemplate.type || 'roll');
+    this.app.updateInspectorLabelSettings();
+    this.setUnsavedChanges(false);
+    this.triggerAutoSave();
+    this.showToast(`Lienzo en blanco creado (${widthMm} × ${heightMm} mm)`, 'success');
+  }
+
+  /**
+   * Resets canvas to a selected pre-designed template
+   */
+  createNewDocument(templateId = 'shipping_4x6') {
+    this.currentDocumentId = 'lbl_' + Math.random().toString(36).substring(2, 10);
+    this.currentCreatedAt = new Date().toISOString();
+    this.currentFileName = null;
+    this.fileHandle = null;
 
     import('./templates.js').then(({ TEMPLATES }) => {
       const template = TEMPLATES[templateId] || TEMPLATES['shipping_4x6'];
       this.app.currentTemplateId = templateId;
+
+      const nameInput = typeof document !== 'undefined' ? document.querySelector('.project-name-input') : null;
+      if (nameInput) {
+        nameInput.value = template.name;
+      }
+
       this.app.canvasEngine.loadTemplate(template);
+
+      if (template.substrate) {
+        this.app.canvasEngine.setSubstrate(template.substrate);
+        if (typeof document !== 'undefined') {
+          document.querySelectorAll('.substrate-pill').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.substrate === template.substrate);
+          });
+        }
+      }
+
+      this.app.updateSegmentedControl(template.type || 'roll');
       this.app.updateInspectorLabelSettings();
+
+      const templateSelect = typeof document !== 'undefined' ? document.getElementById('templateSelect') : null;
+      if (templateSelect) {
+        templateSelect.value = templateId;
+      }
+
       this.setUnsavedChanges(false);
       this.triggerAutoSave();
-      this.showToast('Nueva etiqueta creada', 'info');
+      this.showToast(`Plantilla cargada: ${template.name}`, 'info');
     });
   }
 
@@ -461,6 +524,7 @@ export class DocumentManager {
   }
 
   updateSaveStatusBadge(isSaved) {
+    if (typeof document === 'undefined') return;
     const badge = document.getElementById('saveStatusBadge');
     if (!badge) return;
 
@@ -474,6 +538,7 @@ export class DocumentManager {
   }
 
   showToast(message, type = 'info') {
+    if (typeof document === 'undefined') return;
     let toast = document.getElementById('appToast');
     if (!toast) {
       toast = document.createElement('div');

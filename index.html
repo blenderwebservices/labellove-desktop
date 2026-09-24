@@ -18,6 +18,23 @@
   <!-- Barcode & QR Generation Libraries via CDN (with built-in offline fallbacks) -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- Excel (.xlsx, .xls) and CSV parsing engine via SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Instant Theme Initializer (prevents flash of wrong theme) -->
+  <script>
+    (function() {
+      try {
+        var pref = localStorage.getItem('labellove_theme_preference') || 'system';
+        var theme = pref;
+        if (pref === 'system') {
+          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-theme-preference', pref);
+      } catch(e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -80,7 +97,15 @@
         <select class="template-dropdown-select" id="templateSelect">
           <option value="shipping_4x6">🏷️ Envío E-commerce (100x150 mm / 4x6")</option>
           <option value="warehouse_50x30">🏷️ Almacén / Retail (50x30 mm)</option>
-          <option value="avery_5160">📄 Pliego Avery 5160 (Carta - 30 etiquetas)</option>
+          <option value="avery_5160">📄 Pliego Avery® 5160 (Carta - 30 etiquetas)</option>
+          <option value="avery_5163">📮 Pliego Avery® 5163 (Carta - 10 etiquetas)</option>
+          <option value="avery_5164">📦 Pliego Avery® 5164 (Carta - 6 etiquetas)</option>
+          <option value="avery_22807">⭕ Pliego Avery® 22807 (Redonda 2" - 12 etiq)</option>
+          <option value="avery_5395">🪪 Pliego Avery® 5395 (Gafete - 8 etiquetas)</option>
+          <option value="inventory_50x50">🔲 Activo Fijo & QR (50x50 mm)</option>
+          <option value="bottle_60x100">🍾 Frasco / Botella (60x100 mm)</option>
+          <option value="shipping_4x3">📦 Logística & Almacén (102x76 mm / 4x3")</option>
+          <option value="custom">📐 Lienzo en Blanco / Personalizado</option>
         </select>
       </div>
 
@@ -126,6 +151,41 @@
         <span>📐</span>
         <span id="canvasDimLabel">100 × 150 mm</span>
       </button>
+
+      <!-- Theme Switcher (Claro / Oscuro / Sistema) -->
+      <div class="dropdown-container">
+        <button class="theme-toggle-btn" id="btnThemeToggle" title="Cambiar tema de la interfaz (Claro / Oscuro / Sistema)">
+          <span class="theme-toggle-icon" id="themeBtnIcon">🌙</span>
+          <span id="themeBtnLabel">Oscuro</span>
+          <span class="dropdown-arrow">▾</span>
+        </button>
+        <div class="dropdown-menu theme-dropdown-menu" id="themeDropdown">
+          <button class="dropdown-item theme-option" data-theme-mode="light" title="Modo Claro para ambientes con buena iluminación">
+            <span class="dropdown-item-icon">☀️</span>
+            <div class="dropdown-item-content">
+              <span class="dropdown-item-title">Modo Claro</span>
+              <span class="dropdown-item-sub">Limpio y brillante</span>
+            </div>
+            <span class="theme-check">✓</span>
+          </button>
+          <button class="dropdown-item theme-option is-active" data-theme-mode="dark" title="Modo Oscuro clásico de LabelLove">
+            <span class="dropdown-item-icon">🌙</span>
+            <div class="dropdown-item-content">
+              <span class="dropdown-item-title">Modo Oscuro</span>
+              <span class="dropdown-item-sub">Para poca iluminación</span>
+            </div>
+            <span class="theme-check">✓</span>
+          </button>
+          <button class="dropdown-item theme-option" data-theme-mode="system" title="Seguir la preferencia del sistema operativo">
+            <span class="dropdown-item-icon">💻</span>
+            <div class="dropdown-item-content">
+              <span class="dropdown-item-title">Seguir Sistema</span>
+              <span class="dropdown-item-sub" id="themeSystemSubLabel">Automático según tu dispositivo</span>
+            </div>
+            <span class="theme-check">✓</span>
+          </button>
+        </div>
+      </div>
 
       <!-- Quick Action Buttons -->
       <button class="btn-primary" id="topbarPrintBtn">
@@ -443,9 +503,17 @@
         <span class="drawer-toggle-icon">▼</span>
         <div class="drawer-title">
           <span>📊</span>
-          <span>DATA FLOW: Ordenes_Envio_Septiembre.csv</span>
+          <span id="dataDrawerFileName">DATA FLOW: Ordenes_Envio_Septiembre.csv</span>
         </div>
         <span class="drawer-badge" id="recordCountBadge">5 registros</span>
+      </div>
+
+      <!-- Multi-Sheet Selector Dropdown in Drawer (visible when workbook has >1 sheet) -->
+      <div class="drawer-sheet-selector-group" id="drawerSheetSelectorGroup" style="display: none;">
+        <span class="drawer-sheet-label">Hoja:</span>
+        <select class="drawer-sheet-select" id="drawerSheetSelect" title="Cambiar hoja activa del archivo Excel">
+          <!-- Populated dynamically -->
+        </select>
       </div>
 
       <!-- Record Scrubber in Center -->
@@ -460,7 +528,11 @@
 
       <!-- Actions -->
       <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="btn-secondary" id="addTableRowBtn" style="padding: 2px 8px; font-size: 11px;">
+        <button class="btn-primary" id="btnImportExcel" title="Importar datos desde un archivo Excel (.xlsx, .xls) o CSV">
+          <span>📥</span>
+          <span>Importar Excel / CSV</span>
+        </button>
+        <button class="btn-secondary" id="addTableRowBtn" style="padding: 3px 8px; font-size: 11px;">
           <span>+ Añadir Fila</span>
         </button>
       </div>
@@ -523,7 +595,329 @@
   </div>
 
   <!-- ========================================================================
-       7. Recent Projects & Open Document Modal
+       7. Unsaved Changes Confirmation Modal
+       ======================================================================== -->
+  <div class="modal-backdrop" id="unsavedChangesModal">
+    <div class="modal-window modal-sm confirm-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-title-icon warning-icon">⚠️</span>
+          <span>Cambios sin guardar</span>
+        </div>
+        <button class="modal-close-btn" id="closeUnsavedModalBtn">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="confirm-modal-content">
+          <div class="confirm-icon-box">
+            💾
+          </div>
+          <div class="confirm-texts">
+            <h4>¿Deseas guardar los cambios antes de continuar?</h4>
+            <p id="unsavedModalDesc">
+              El trabajo actual tiene modificaciones que no has guardado. Si creas un nuevo trabajo sin guardar, tus cambios se perderán.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer confirm-modal-footer">
+        <button class="btn-secondary" id="btnCancelUnsavedModal">Cancelar</button>
+        <div class="confirm-right-actions">
+          <button class="btn-danger-outline" id="btnDiscardAndContinueNew">
+            <span>🗑️</span>
+            <span>No guardar</span>
+          </button>
+          <button class="btn-primary" id="btnSaveAndContinueNew">
+            <span>💾</span>
+            <span>Guardar y continuar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       8. Create New Job Modal (Blank Custom & Avery / Popular Templates)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="newJobModal">
+    <div class="modal-window modal-xl new-job-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-title-icon">📄</span>
+          <div>
+            <div style="font-size: 16px; font-weight: 700; line-height: 1.2;">Nuevo Trabajo de Etiquetas</div>
+            <div style="font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 2px;">
+              Configura un lienzo en blanco a medida o elige una plantilla prediseñada del catálogo
+            </div>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeNewJobModalBtn">✕</button>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="new-job-tabs">
+        <button class="new-job-tab-btn active" id="tabBtnBlank" data-tab="blank">
+          <span class="tab-icon">📐</span>
+          <span class="tab-title">Lienzo en Blanco & Medidas Estándar</span>
+        </button>
+        <button class="new-job-tab-btn" id="tabBtnTemplates" data-tab="templates">
+          <span class="tab-icon">🏷️</span>
+          <span class="tab-title">Plantillas Populares & Catálogo Avery®</span>
+          <span class="tab-badge" id="templatesCountBadge">10</span>
+        </button>
+      </div>
+
+      <div class="modal-body new-job-modal-body">
+        <!-- TAB 1: BLANK & STANDARD SIZES -->
+        <div class="new-job-tab-content active" id="tabContentBlank">
+          <div class="new-job-section-title">
+            <span class="section-title-main">⚡ Medidas Estándar Populares</span>
+            <span class="section-title-sub">Haz clic en cualquier formato para cargar sus dimensiones al instante</span>
+          </div>
+
+          <!-- Standard Presets Cards Grid -->
+          <div class="standard-presets-grid" id="standardPresetsGrid">
+            <!-- Populated dynamically by app.js from STANDARD_PRESETS -->
+          </div>
+
+          <div class="new-job-section-title" style="margin-top: 18px;">
+            <span class="section-title-main">⚙️ Configuración Personalizada del Lienzo</span>
+            <span class="section-title-sub">Ajusta dimensiones, orientación y propiedades del papel para tu nuevo trabajo</span>
+          </div>
+
+          <div class="blank-custom-layout">
+            <!-- Left: Settings Form -->
+            <div class="blank-form-col">
+              <div class="form-group-row">
+                <div class="form-field-group" style="flex: 2;">
+                  <label for="newJobName">Nombre del Trabajo</label>
+                  <input type="text" id="newJobName" class="form-input" value="Nueva Etiqueta" placeholder="Ej. Envío Express 4x6">
+                </div>
+                <div class="form-field-group" style="flex: 1;">
+                  <label for="newJobDpi">Resolución (DPI)</label>
+                  <select id="newJobDpi" class="form-select">
+                    <option value="203">203 DPI (Térmica estándar)</option>
+                    <option value="300" selected>300 DPI (Alta resolución)</option>
+                    <option value="600">600 DPI (Micro-códigos)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group-row form-dims-row">
+                <div class="form-field-group">
+                  <label for="newJobWidth">Ancho (mm)</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="newJobWidth" class="form-input" value="100" min="10" max="600" step="0.5">
+                    <span class="input-suffix">mm</span>
+                  </div>
+                  <span class="dim-converted-inch" id="widthInchesLabel">3.94 in</span>
+                </div>
+
+                <div class="swap-dim-btn-container">
+                  <button type="button" class="btn-swap-dims" id="btnSwapDims" title="Intercambiar ancho y alto">
+                    <span>🔄</span>
+                  </button>
+                </div>
+
+                <div class="form-field-group">
+                  <label for="newJobHeight">Alto (mm)</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="newJobHeight" class="form-input" value="150" min="10" max="600" step="0.5">
+                    <span class="input-suffix">mm</span>
+                  </div>
+                  <span class="dim-converted-inch" id="heightInchesLabel">5.91 in</span>
+                </div>
+
+                <div class="form-field-group">
+                  <label for="newJobOrientation">Orientación</label>
+                  <select id="newJobOrientation" class="form-select">
+                    <option value="portrait" selected>Vertical (Retrato)</option>
+                    <option value="landscape">Horizontal (Paisaje)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group-row">
+                <div class="form-field-group">
+                  <label for="newJobType">Formato de Salida</label>
+                  <select id="newJobType" class="form-select">
+                    <option value="roll" selected>🖨️ Rollo Continuo / Térmico</option>
+                    <option value="sheet">📄 Pliego de Etiquetas (Hojas)</option>
+                  </select>
+                </div>
+
+                <div class="form-field-group">
+                  <label for="newJobSubstrate">Material / Sustrato</label>
+                  <select id="newJobSubstrate" class="form-select">
+                    <option value="thermal" selected>Térmico Directo (Sin tinta)</option>
+                    <option value="gloss">Blanco Brillante (Glossy)</option>
+                    <option value="kraft">Papel Kraft Vintage</option>
+                    <option value="clear">Poliéster Transparente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Dynamic Interactive Aspect Preview -->
+            <div class="blank-preview-col">
+              <div class="blank-preview-card">
+                <div class="blank-preview-header">
+                  <span>Proporción y Lienzo</span>
+                  <span class="preview-aspect-tag" id="previewAspectTag">2:3 (Vertical)</span>
+                </div>
+                <div class="blank-preview-stage-container">
+                  <div class="blank-preview-stage" id="blankPreviewStage">
+                    <div class="blank-preview-safe-area">
+                      <span class="safe-margin-tag">Margen 1.5mm</span>
+                    </div>
+                    <div class="blank-preview-dim-tag" id="blankPreviewDimTag">100 × 150 mm</div>
+                  </div>
+                </div>
+                <div class="blank-preview-footer">
+                  <span id="previewSubstrateTag">Sustrato: Térmico Directo</span>
+                  <span id="previewDpiTag">300 DPI</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: TEMPLATES CATALOG & AVERY -->
+        <div class="new-job-tab-content" id="tabContentTemplates">
+          <div class="templates-filter-bar">
+            <div class="templates-search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="templateSearchInput" placeholder="Buscar por modelo Avery, medida, tipo o palabra clave...">
+            </div>
+            <div class="template-category-pills" id="templateCategoryPills">
+              <button class="cat-pill active" data-cat="all">Todas</button>
+              <button class="cat-pill" data-cat="avery">Catálogo Avery®</button>
+              <button class="cat-pill" data-cat="shipping">Envíos & Logística</button>
+              <button class="cat-pill" data-cat="retail">Retail & Almacén</button>
+              <button class="cat-pill" data-cat="special">Redondas & Especiales</button>
+            </div>
+          </div>
+
+          <!-- Catalog Grid -->
+          <div class="templates-catalog-grid" id="templatesCatalogGrid">
+            <!-- Populated dynamically by app.js from TEMPLATES -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer new-job-modal-footer">
+        <div class="new-job-footer-left">
+          <span style="font-size: 11px; color: var(--text-muted);">
+            Podrás modificar las dimensiones, capas y datos variables en cualquier momento desde el inspector.
+          </span>
+        </div>
+        <div class="new-job-footer-right">
+          <button class="btn-secondary" id="cancelNewJobModalBtn">Cancelar</button>
+          <button class="btn-primary" id="btnCreateBlankSubmit">
+            <span>✨</span>
+            <span>Crear Trabajo en Blanco</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       9. Excel / CSV Multi-Sheet Import Modal
+       ======================================================================== -->
+  <div class="modal-backdrop" id="excelImportModal">
+    <div class="modal-window modal-lg excel-import-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-title-icon">📊</span>
+          <div>
+            <div style="font-size: 16px; font-weight: 700; line-height: 1.2;">Importar Datos de Excel / CSV</div>
+            <div style="font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 2px;">
+              Selecciona la hoja de cálculo y revisa las columnas detectadas para tus etiquetas
+            </div>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeExcelModalBtn">✕</button>
+      </div>
+
+      <div class="modal-body excel-import-modal-body">
+        <!-- File Info Bar -->
+        <div class="excel-file-info-bar">
+          <div class="excel-file-info-left">
+            <span class="excel-icon">📗</span>
+            <div>
+              <div class="excel-file-name" id="excelFileNameDisplay">archivo.xlsx</div>
+              <div class="excel-file-meta" id="excelFileMetaDisplay">0 KB • 0 hojas encontradas</div>
+            </div>
+          </div>
+          <button class="btn-secondary" id="btnChooseAnotherExcelFile" style="font-size: 11px; padding: 5px 12px;">
+            <span>📁 Cambiar archivo</span>
+          </button>
+        </div>
+
+        <!-- Sheet Selector Section -->
+        <div class="excel-section" id="excelSheetSelectorSection">
+          <label class="excel-section-label">
+            <span>📑 Hojas de cálculo disponibles en el archivo:</span>
+            <span style="font-weight: normal; color: var(--text-muted); font-size: 11px;">(Haz clic en una pestaña para ver su contenido)</span>
+          </label>
+          <div class="excel-sheets-list" id="excelSheetsList">
+            <!-- Sheet pills rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Preview & Column Options Header -->
+        <div class="excel-preview-header">
+          <div class="excel-preview-title-group">
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Previsualización de Filas y Columnas</span>
+            <span class="excel-stat-badge" id="excelSheetStatsBadge">0 columnas • 0 filas</span>
+          </div>
+
+          <label class="excel-checkbox-label" title="Si está activo, la primera fila se utilizará como los nombres de las variables {{ campo }}">
+            <input type="checkbox" id="excelHasHeadersCheckbox" checked>
+            <span>Primera fila como encabezados ({{ variable }})</span>
+          </label>
+        </div>
+
+        <!-- Scrollable Table Preview -->
+        <div class="excel-preview-table-container" id="excelPreviewTableContainer">
+          <table class="excel-preview-table" id="excelPreviewTable">
+            <!-- Rendered dynamically -->
+          </table>
+        </div>
+
+        <!-- Helpful Tip Banner -->
+        <div class="excel-tip-banner">
+          <span class="tip-icon">💡</span>
+          <div class="tip-content">
+            <strong>Variables listas para usar:</strong> Cada columna detectada estará disponible como <code>{{ nombre_columna }}</code> para vincularla a textos, códigos de barras o códigos QR desde el inspector.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="excel-footer-left">
+          <span style="font-size: 11px; color: var(--text-muted);" id="excelImportSummaryText">
+            Selecciona la hoja que deseas asociar al proyecto de etiquetas.
+          </span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-secondary" id="cancelExcelModalBtn">Cancelar</button>
+          <button class="btn-primary" id="confirmExcelImportBtn">
+            <span>📥</span>
+            <span>Importar Hoja Seleccionada</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden native file input for Excel files -->
+  <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+
+  <!-- ========================================================================
+       10. Recent Projects & Open Document Modal
        ======================================================================== -->
   <div class="modal-backdrop" id="recentProjectsModal">
     <div class="modal-window modal-lg">
