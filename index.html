@@ -244,6 +244,11 @@
         <span class="tool-btn-title">Línea</span>
       </button>
 
+      <button class="tool-btn" id="toolAddImage" data-tooltip="Añadir Imagen / Logo (I)">
+        <span style="font-size: 15px;">🖼️</span>
+        <span class="tool-btn-title">Imagen</span>
+      </button>
+
       <div class="tool-divider"></div>
 
       <button class="tool-btn" id="toolAddVariable" data-tooltip="Variable Dinámica {{ }}">
@@ -573,6 +578,85 @@
               <div>
                 <strong id="scannerGaugeStatus">Excelente lectura óptica</strong>
                 <div style="font-size: 10px; opacity: 0.85;" id="scannerGaugeDetails">Módulo: 12.5 mils (2.5 dots @ 203 DPI)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image / Logo Properties -->
+          <div class="inspector-section" id="sectionImageProperties" style="display: none;">
+            <div class="section-header">
+              <span>Propiedades de Imagen / Logo</span>
+            </div>
+
+            <!-- Preview Thumbnail and Replace Button -->
+            <div class="image-preview-card" style="display: flex; gap: 12px; align-items: center; background: var(--bg-surface-elevated); padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div id="propImageThumbBox" style="width: 56px; height: 56px; border-radius: 4px; border: 1px dashed var(--border-subtle); display: flex; align-items: center; justify-content: center; overflow: hidden; background: #ffffff; flex-shrink: 0;">
+                <img id="propImageThumb" src="" alt="Preview" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;">
+                <span id="propImageThumbEmpty" style="font-size: 20px; opacity: 0.5;">🖼️</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                <button class="btn-secondary" id="propImageUploadBtn" style="font-size: 11px; padding: 4px 8px; justify-content: center;">
+                  <span>📁</span>
+                  <span>Cargar Imagen...</span>
+                </button>
+                <span style="font-size: 10px; color: var(--text-faint);" id="propImageFileInfo">PNG, JPG, SVG o WebP</span>
+              </div>
+            </div>
+
+            <!-- Preset Logistics Pictograms -->
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Pictogramas Predefinidos:</span>
+              <div class="image-presets-row" style="display: flex; gap: 6px;">
+                <button type="button" class="btn-secondary" id="presetFragileBtn" title="Frágil / Copa" style="flex: 1; padding: 4px 2px; font-size: 11px; justify-content: center;">🍷 Frágil</button>
+                <button type="button" class="btn-secondary" id="presetArrowsBtn" title="Este Lado Arriba" style="flex: 1; padding: 4px 2px; font-size: 11px; justify-content: center;">⬆️ Arriba</button>
+                <button type="button" class="btn-secondary" id="presetRecycleBtn" title="Reciclable" style="flex: 1; padding: 4px 2px; font-size: 11px; justify-content: center;">♻️ Eco</button>
+                <button type="button" class="btn-secondary" id="presetLogoBtn" title="Logo LabelLove" style="flex: 1; padding: 4px 2px; font-size: 11px; justify-content: center;">⚡ Logo</button>
+              </div>
+            </div>
+
+            <!-- URL / Data Source Input -->
+            <div class="input-with-label" style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Origen / URL / Variable:</span>
+              <input type="text" class="text-input" id="propImageSrcInput" placeholder="data:image/... o https://... o {{ logo }}">
+            </div>
+
+            <!-- Object Fit Mode -->
+            <div class="input-with-label" style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Ajuste de Proporción (Fit):</span>
+              <select class="select-input" id="propImageFit">
+                <option value="contain">Ajustar proporcional (Contain)</option>
+                <option value="cover">Llenar marco recortando (Cover)</option>
+                <option value="fill">Estirar hasta bordes (Fill)</option>
+              </select>
+            </div>
+
+            <!-- Opacity Slider -->
+            <div class="input-with-label" style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                <span>Opacidad:</span>
+                <span id="propImageOpacityVal">100%</span>
+              </div>
+              <input type="range" min="10" max="100" value="100" class="range-slider" id="propImageOpacity">
+            </div>
+
+            <!-- Thermal Monochrome Filter -->
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <label class="excel-checkbox-label" style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="propImageMonochrome">
+                <span style="font-weight: 500;">Modo Monocromático Térmico (1-bit B&W)</span>
+              </label>
+              
+              <div id="propImageMonochromeSettings" style="display: none; flex-direction: column; gap: 8px; padding-left: 18px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                  <span>Umbral de Contraste (Threshold):</span>
+                  <span id="propImageThresholdVal">128</span>
+                </div>
+                <input type="range" min="10" max="245" value="128" class="range-slider" id="propImageThreshold">
+
+                <label class="excel-checkbox-label" style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="propImageInvert">
+                  <span>Invertir colores (Negativo)</span>
+                </label>
               </div>
             </div>
           </div>
@@ -1414,6 +1498,8 @@
 
   <!-- Hidden native file input for opening files -->
   <input type="file" id="fileOpenInput" accept=".labellove,.json" style="display: none;">
+  <!-- Hidden native file input for loading images -->
+  <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" style="display: none;">
 
   <!-- Physical Print Container for @media print (Hidden on screen) -->
   <div id="sheetPrintArea" class="sheet-print-area" aria-hidden="true"></div>

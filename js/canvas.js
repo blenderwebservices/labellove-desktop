@@ -260,6 +260,50 @@ export class CanvasEngine {
       else if (el.type === 'shape') {
         elNode.classList.add('el-shape', `shape-${el.shapeType || 'rect'}`);
       }
+      else if (el.type === 'image') {
+        elNode.classList.add('el-image');
+        let rawSrc = el.src || '';
+        if (rawSrc && rawSrc.includes('{{')) {
+          rawSrc = this.dataStore.interpolate(rawSrc, activeRecord);
+        }
+
+        if (!rawSrc) {
+          elNode.innerHTML = `
+            <div class="image-empty-placeholder" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1.5px dashed var(--border-subtle); border-radius: 4px; background: rgba(0, 0, 0, 0.03); color: var(--text-faint); font-size: ${Math.max(9, 11 * this.zoom)}px; text-align: center; padding: 4px; box-sizing: border-box; pointer-events: none;">
+              <span style="font-size: ${Math.max(14, 18 * this.zoom)}px;">🖼️</span>
+              <span>Sin imagen</span>
+            </div>
+          `;
+        } else {
+          const img = document.createElement('img');
+          img.src = rawSrc;
+          img.alt = el.imageName || 'Imagen';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = el.fit || 'contain';
+          img.style.opacity = el.opacity !== undefined ? el.opacity : 1;
+          img.style.display = 'block';
+          img.style.pointerEvents = 'none';
+          img.draggable = false;
+
+          if (el.monochrome) {
+            const thresh = el.threshold !== undefined ? el.threshold : 128;
+            const contrastVal = Math.max(100, (thresh / 128) * 1000);
+            const invertStr = el.invert ? 'invert(100%) ' : '';
+            img.style.filter = `${invertStr}grayscale(100%) contrast(${contrastVal}%)`;
+          } else if (el.invert) {
+            img.style.filter = 'invert(100%)';
+          }
+
+          elNode.innerHTML = '';
+          elNode.appendChild(img);
+        }
+
+        elNode.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          document.getElementById('imageFileInput')?.click();
+        });
+      }
 
       // Pointer event for selecting
       elNode.addEventListener('mousedown', (e) => this.onElementMouseDown(e, el));

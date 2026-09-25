@@ -828,6 +828,34 @@ export class SheetPrintEngine {
         elNode.classList.add('el-shape', `shape-${el.shapeType || 'rect'}`);
         elNode.style.borderColor = '#000000';
       }
+      else if (el.type === 'image') {
+        elNode.classList.add('el-image');
+        let rawSrc = el.src || '';
+        if (rawSrc && rawSrc.includes('{{')) {
+          rawSrc = this.dataStore.interpolate(rawSrc, record);
+        }
+        if (rawSrc) {
+          const img = document.createElement('img');
+          img.src = rawSrc;
+          img.alt = el.imageName || 'Imagen';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = el.fit || 'contain';
+          img.style.opacity = el.opacity !== undefined ? el.opacity : 1;
+          img.style.display = 'block';
+
+          if (el.monochrome) {
+            const thresh = el.threshold !== undefined ? el.threshold : 128;
+            const contrastVal = Math.max(100, (thresh / 128) * 1000);
+            const invertStr = el.invert ? 'invert(100%) ' : '';
+            img.style.filter = `${invertStr}grayscale(100%) contrast(${contrastVal}%)`;
+          } else if (el.invert) {
+            img.style.filter = 'invert(100%)';
+          }
+
+          elNode.appendChild(img);
+        }
+      }
 
       stage.appendChild(elNode);
     });

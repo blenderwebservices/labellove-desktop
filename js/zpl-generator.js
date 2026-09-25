@@ -184,6 +184,13 @@ export class ZPLGenerator {
         commands.push(`^FO${x},${y}`);
         commands.push(`^GB${w},${h},${borderThickness}^FS`);
       }
+      else if (el.type === 'image') {
+        const zplGraphic = this.imageToZPL(el, dpi);
+        if (zplGraphic) {
+          commands.push(`^FO${x},${y}`);
+          commands.push(zplGraphic);
+        }
+      }
     }
 
     // End of Label
@@ -191,6 +198,91 @@ export class ZPLGenerator {
     commands.push('^XZ');
 
     return commands.join('\n');
+  }
+
+  /**
+   * Converts an image element to native Zebra ZPL II ^GFA graphic field
+   */
+  static imageToZPL(el, dpi = 203) {
+    if (el.zplData && el.zplData.hex) {
+      return `^GFA,${el.zplData.bytes},${el.zplData.totalBytes},${el.zplData.rowBytes},${el.zplData.hex}^FS`;
+    }
+
+    const widthDots = this.mmToDots(el.widthMm, dpi);
+    const heightDots = this.mmToDots(el.heightMm, dpi);
+    const rowBytes = Math.ceil(widthDots / 8);
+    const totalBytes = rowBytes * heightDots;
+
+    if (typeof document !== 'undefined' && el.src) {
+      try {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = widthDots;
+        offscreen.height = heightDots;
+        const ctx = offscreen.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, widthDots, heightDots);
+
+          const img = new Image();
+          img.src = el.src;
+
+          if (img.complete && img.naturalWidth > 0) {
+            const fit = el.fit || 'contain';
+            let dw = widthDots, dh = heightDots, dx = 0, dy = 0;
+            if (fit === 'contain') {
+              const r = Math.min(widthDots / img.naturalWidth, heightDots / img.naturalHeight);
+              dw = img.naturalWidth * r;
+              dh = img.naturalHeight * r;
+              dx = (widthDots - dw) / 2;
+              dy = (heightDots - dh) / 2;
+            } else if (fit === 'cover') {
+              const r = Math.max(widthDots / img.naturalWidth, heightDots / img.naturalHeight);
+              dw = img.naturalWidth * r;
+              dh = img.naturalHeight * r;
+              dx = (widthDots - dw) / 2;
+              dy = (heightDots - dh) / 2;
+            }
+            ctx.drawImage(img, dx, dy, dw, dh);
+
+            const imgData = ctx.getImageData(0, 0, widthDots, heightDots);
+            const pixels = imgData.data;
+            const threshold = el.threshold !== undefined ? el.threshold : 128;
+            const invert = !!el.invert;
+
+            let hex = '';
+            for (let y = 0; y < heightDots; y++) {
+              for (let b = 0; b < rowBytes; b++) {
+                let byteVal = 0;
+                for (let bit = 0; bit < 8; bit++) {
+                  const x = b * 8 + bit;
+                  if (x < widthDots) {
+                    const idx = (y * widthDots + x) * 4;
+                    const r = pixels[idx];
+                    const g = pixels[idx + 1];
+                    const bVal = pixels[idx + 2];
+                    const a = pixels[idx + 3];
+                    const lum = 0.299 * r + 0.587 * g + 0.114 * bVal;
+                    let isBlack = a >= 64 && lum < threshold;
+                    if (invert) isBlack = !isBlack;
+                    if (isBlack) {
+                      byteVal |= (1 << (7 - bit));
+                    }
+                  }
+                }
+                hex += byteVal.toString(16).padStart(2, '0').toUpperCase();
+              }
+            }
+            return `^GFA,${totalBytes},${totalBytes},${rowBytes},${hex}^FS`;
+          }
+        }
+      } catch (err) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('Error converting image to ZPL:', err);
+        }
+      }
+    }
+
+    return `^GB${widthDots},${heightDots},1^FS`;
   }
 
   static escapeZPL(text) {

@@ -11,6 +11,25 @@ import { DocumentManager } from './document-manager.js';
 import { FormatEngine } from './format-engine.js';
 import { SheetPrintEngine } from './sheet-print-engine.js';
 
+export const IMAGE_PRESETS = {
+  fragile: {
+    name: 'Pictograma Frágil (Copa)',
+    svg: `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><path d="M35 15 L65 15 C65 35 60 52 52 58 L52 82 L65 82 L65 88 L35 88 L35 82 L48 82 L48 58 C40 52 35 35 35 15 Z" fill="none" stroke="#000000" stroke-width="5" stroke-linejoin="round"/><path d="M47 15 L43 28 L53 36 L48 46" fill="none" stroke="#000000" stroke-width="4" stroke-linecap="round"/></svg>')}`
+  },
+  arrows: {
+    name: 'Este Lado Arriba (↑↑)',
+    svg: `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><path d="M20 82 L80 82" stroke="#000000" stroke-width="6" stroke-linecap="round"/><path d="M32 74 L32 28 M32 28 L20 40 M32 28 L44 40" fill="none" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M68 74 L68 28 M68 28 L56 40 M68 28 L80 40" fill="none" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>')}`
+  },
+  recycle: {
+    name: 'Símbolo Reciclaje (♻️)',
+    svg: `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><path d="M50 15 L62 32 L54 32 C58 45 68 53 80 54 L75 62 C60 60 48 48 45 32 L38 32 Z M24 64 L16 46 L23 42 C16 30 20 18 29 11 L35 18 C28 23 26 33 33 44 L39 40 Z M72 74 L46 74 L49 67 C36 67 25 58 23 46 L31 44 C34 54 42 61 54 61 L51 54 Z" fill="#000000"/></svg>')}`
+  },
+  logo: {
+    name: 'Logo LabelLove',
+    svg: `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><rect width="100" height="100" rx="20" fill="#0f172a"/><path d="M55 16 L30 52 L50 52 L42 84 L72 44 L52 44 Z" fill="#6366f1"/><path d="M65 65 C65 60 72 58 75 62 C78 58 85 60 85 65 C85 72 75 78 75 78 C75 78 65 72 65 65 Z" fill="#ec4899"/></svg>')}`
+  }
+};
+
 class App {
   constructor() {
     this.dataStore = new DataStore();
@@ -59,6 +78,7 @@ class App {
     this.setupUIEvents();
     this.setupInspectorEvents();
     this.setupKeyboardShortcuts();
+    this.setupImageInput();
 
     // Listen to data store changes
     this.dataStore.onChange(() => {
@@ -285,6 +305,10 @@ class App {
         heightMm: 1
       });
       this.docManager.setUnsavedChanges(true);
+    });
+
+    document.getElementById('toolAddImage')?.addEventListener('click', () => {
+      this.addNewImageElement();
     });
 
     document.getElementById('toolAddVariable')?.addEventListener('click', () => {
@@ -629,11 +653,13 @@ class App {
     const textSection = document.getElementById('sectionTextProperties');
     const barcodeSection = document.getElementById('sectionBarcodeProperties');
     const maskSection = document.getElementById('sectionNumberMask');
+    const imageSection = document.getElementById('sectionImageProperties');
 
     if (el.type === 'text') {
       if (textSection) textSection.style.display = 'flex';
       if (barcodeSection) barcodeSection.style.display = 'none';
       if (maskSection) maskSection.style.display = 'flex';
+      if (imageSection) imageSection.style.display = 'none';
       document.getElementById('propTextContent').value = el.text || '';
       this.updateNumericDetectionUI(el);
       this.updateMaskPreview(el);
@@ -641,6 +667,7 @@ class App {
       if (textSection) textSection.style.display = 'none';
       if (barcodeSection) barcodeSection.style.display = 'flex';
       if (maskSection) maskSection.style.display = 'none';
+      if (imageSection) imageSection.style.display = 'none';
       document.getElementById('propCodeValue').value = el.value || '';
       
       const normFormat = BarcodeEngine.normalizeFormat(el.format || (el.type === 'qr' ? 'qrcode' : 'code128'));
@@ -675,10 +702,45 @@ class App {
           </div>
         `;
       }
+    } else if (el.type === 'image') {
+      if (textSection) textSection.style.display = 'none';
+      if (barcodeSection) barcodeSection.style.display = 'none';
+      if (maskSection) maskSection.style.display = 'none';
+      if (imageSection) imageSection.style.display = 'flex';
+
+      const srcInput = document.getElementById('propImageSrcInput');
+      if (srcInput) srcInput.value = el.src || '';
+
+      const fitSelect = document.getElementById('propImageFit');
+      if (fitSelect) fitSelect.value = el.fit || 'contain';
+
+      const opacityVal = Math.round((el.opacity !== undefined ? el.opacity : 1) * 100);
+      const opacitySlider = document.getElementById('propImageOpacity');
+      if (opacitySlider) opacitySlider.value = opacityVal;
+      const opacityText = document.getElementById('propImageOpacityVal');
+      if (opacityText) opacityText.textContent = `${opacityVal}%`;
+
+      const isMono = !!el.monochrome;
+      const monoCheckbox = document.getElementById('propImageMonochrome');
+      if (monoCheckbox) monoCheckbox.checked = isMono;
+      const monoSettings = document.getElementById('propImageMonochromeSettings');
+      if (monoSettings) monoSettings.style.display = isMono ? 'flex' : 'none';
+
+      const thresh = el.threshold !== undefined ? el.threshold : 128;
+      const threshSlider = document.getElementById('propImageThreshold');
+      if (threshSlider) threshSlider.value = thresh;
+      const threshText = document.getElementById('propImageThresholdVal');
+      if (threshText) threshText.textContent = thresh;
+
+      const invertCheckbox = document.getElementById('propImageInvert');
+      if (invertCheckbox) invertCheckbox.checked = !!el.invert;
+
+      this.updateInspectorImageThumb(el);
     } else {
       if (textSection) textSection.style.display = 'none';
       if (barcodeSection) barcodeSection.style.display = 'none';
       if (maskSection) maskSection.style.display = 'none';
+      if (imageSection) imageSection.style.display = 'none';
     }
 
     // Populate data binding options
@@ -803,8 +865,8 @@ class App {
       `;
       row.innerHTML = `
         <div style="display:flex; align-items:center; gap:6px;">
-          <span>${el.type === 'text' ? 'T' : el.type === 'barcode' ? '|||' : el.type === 'qr' ? '▦' : '▢'}</span>
-          <span style="font-weight: 500;">${el.text || el.value || el.id}</span>
+          <span>${el.type === 'text' ? 'T' : el.type === 'barcode' ? '|||' : el.type === 'qr' ? '▦' : el.type === 'image' ? '🖼️' : '▢'}</span>
+          <span style="font-weight: 500;">${el.imageName || el.text || el.value || el.id}</span>
         </div>
         <span style="color: var(--text-faint); font-size: 10px;">${el.type}</span>
       `;
@@ -943,6 +1005,12 @@ class App {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         this.handleNewDocumentRequest();
+        return;
+      }
+
+      // Key 'i' / 'I' (Añadir Imagen)
+      if (e.key.toLowerCase() === 'i' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        this.addNewImageElement();
         return;
       }
 
@@ -2000,6 +2068,189 @@ class App {
         applyTheme(mode, true);
         themeDropdown?.classList.remove('is-open');
       });
+    });
+  }
+
+  // ------------------------------------------------------------------------
+  // Image Element Management & Presets
+  // ------------------------------------------------------------------------
+  addNewImageElement(presetKey = 'fragile') {
+    const preset = IMAGE_PRESETS[presetKey] || IMAGE_PRESETS.fragile;
+    this.canvasEngine.addElement({
+      type: 'image',
+      src: preset.svg,
+      imageName: preset.name,
+      widthMm: 22,
+      heightMm: 22,
+      fit: 'contain',
+      opacity: 1,
+      monochrome: false,
+      threshold: 128,
+      invert: false
+    });
+    this.docManager?.setUnsavedChanges(true);
+  }
+
+  updateInspectorImageThumb(el) {
+    const thumb = document.getElementById('propImageThumb');
+    const emptyIcon = document.getElementById('propImageThumbEmpty');
+    const fileInfo = document.getElementById('propImageFileInfo');
+
+    if (el && el.src) {
+      if (thumb) {
+        thumb.src = el.src;
+        thumb.style.display = 'block';
+      }
+      if (emptyIcon) emptyIcon.style.display = 'none';
+      if (fileInfo) fileInfo.textContent = el.imageName || 'Imagen cargada';
+    } else {
+      if (thumb) {
+        thumb.src = '';
+        thumb.style.display = 'none';
+      }
+      if (emptyIcon) emptyIcon.style.display = 'block';
+      if (fileInfo) fileInfo.textContent = 'Sin imagen cargada';
+    }
+  }
+
+  setupImageInput() {
+    const fileInput = document.getElementById('imageFileInput');
+    const uploadBtn = document.getElementById('propImageUploadBtn');
+
+    uploadBtn?.addEventListener('click', () => {
+      fileInput?.click();
+    });
+
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        let el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+
+        if (!el || el.type !== 'image') {
+          this.canvasEngine.addElement({
+            type: 'image',
+            src: dataUrl,
+            imageName: file.name,
+            widthMm: 25,
+            heightMm: 25,
+            fit: 'contain',
+            opacity: 1,
+            monochrome: false,
+            threshold: 128,
+            invert: false
+          });
+          el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+        } else {
+          el.src = dataUrl;
+          el.imageName = file.name;
+        }
+
+        const tempImg = new Image();
+        tempImg.onload = () => {
+          if (tempImg.naturalWidth && tempImg.naturalHeight && el) {
+            const aspect = tempImg.naturalWidth / tempImg.naturalHeight;
+            if (aspect > 1) {
+              el.widthMm = Math.round(Math.min(el.heightMm * aspect, this.canvasEngine.currentTemplate.widthMm - el.xMm) * 2) / 2;
+            } else {
+              el.heightMm = Math.round(Math.min(el.widthMm / aspect, this.canvasEngine.currentTemplate.heightMm - el.yMm) * 2) / 2;
+            }
+          }
+          this.canvasEngine.renderElements();
+          this.canvasEngine.updateTransformer();
+          this.updateInspectorValues(el);
+          this.docManager?.setUnsavedChanges(true);
+        };
+        tempImg.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+      fileInput.value = '';
+    });
+
+    const applyPreset = (key) => {
+      let el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (!el || el.type !== 'image') {
+        this.addNewImageElement(key);
+        return;
+      }
+      const preset = IMAGE_PRESETS[key];
+      if (preset) {
+        el.src = preset.svg;
+        el.imageName = preset.name;
+        this.canvasEngine.renderElements();
+        this.updateInspectorValues(el);
+        this.docManager?.setUnsavedChanges(true);
+      }
+    };
+
+    document.getElementById('presetFragileBtn')?.addEventListener('click', () => applyPreset('fragile'));
+    document.getElementById('presetArrowsBtn')?.addEventListener('click', () => applyPreset('arrows'));
+    document.getElementById('presetRecycleBtn')?.addEventListener('click', () => applyPreset('recycle'));
+    document.getElementById('presetLogoBtn')?.addEventListener('click', () => applyPreset('logo'));
+
+    document.getElementById('propImageSrcInput')?.addEventListener('input', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el && el.type === 'image') {
+        el.src = e.target.value.trim();
+        this.canvasEngine.renderElements();
+        this.updateInspectorImageThumb(el);
+        this.docManager?.setUnsavedChanges(true);
+      }
+    });
+
+    document.getElementById('propImageFit')?.addEventListener('change', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el && el.type === 'image') {
+        el.fit = e.target.value;
+        this.canvasEngine.renderElements();
+        this.docManager?.setUnsavedChanges(true);
+      }
+    });
+
+    document.getElementById('propImageOpacity')?.addEventListener('input', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el && el.type === 'image') {
+        const val = parseInt(e.target.value, 10) / 100;
+        el.opacity = val;
+        const text = document.getElementById('propImageOpacityVal');
+        if (text) text.textContent = `${Math.round(val * 100)}%`;
+        this.canvasEngine.renderElements();
+        this.docManager?.setUnsavedChanges(true);
+      }
+    });
+
+    document.getElementById('propImageMonochrome')?.addEventListener('change', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el && el.type === 'image') {
+        el.monochrome = e.target.checked;
+        const settings = document.getElementById('propImageMonochromeSettings');
+        if (settings) settings.style.display = el.monochrome ? 'flex' : 'none';
+        this.canvasEngine.renderElements();
+        this.docManager?.setUnsavedChanges(true);
+      }
+    });
+
+    document.getElementById('propImageThreshold')?.addEventListener('input', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el && el.type === 'image') {
+        el.threshold = parseInt(e.target.value, 10);
+        const text = document.getElementById('propImageThresholdVal');
+        if (text) text.textContent = el.threshold;
+        this.canvasEngine.renderElements();
+        this.docManager?.setUnsavedChanges(true);
+      }
+    });
+
+    document.getElementById('propImageInvert')?.addEventListener('change', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el && el.type === 'image') {
+        el.invert = e.target.checked;
+        this.canvasEngine.renderElements();
+        this.docManager?.setUnsavedChanges(true);
+      }
     });
   }
 }

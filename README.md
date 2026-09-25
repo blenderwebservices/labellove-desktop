@@ -43,12 +43,20 @@ Soporte de más de 39 simbologías profesionales procesadas en tiempo real media
 - **Retail y Logística 1D:** EAN-13, EAN-8, UPC-A, UPC-E, ITF-14, Code 128 (A, B, C y Auto), GS1-128, Code 39, Codabar, ISBN.
 - **Postales y Especiales:** USPS Intelligent Mail, Royal Mail, Pharmacode.
 
-### 3. Impresión Térmica en Rollo Continuo (ZPL II)
+### 3. Elementos de Imagen, Logos y Pictogramas
+- **Carga Versátil de Imágenes:** Soporte para subir archivos desde disco local (`.png`, `.jpg`, `.svg`, `.webp`, `.gif`), URLs directas o variables dinámicas (`{{ logo_url }}`).
+- **Base64 Autónomo:** Las imágenes cargadas se convierten automáticamente a DataURL para garantizar que los archivos de proyecto `.labellove` sean 100% autocontenidos y portátiles sin perder referencias.
+- **Pictogramas Rápidos de Logística:** Presets vectoriales de un solo clic para empaque y envíos (Frágil / Copa 🍷, Este Lado Arriba ⬆️, Reciclaje ♻️, Logo LabelLove ⚡).
+- **Ajuste y Control Visual:** Modos de proporción (`contain`, `cover`, `fill`), control de opacidad (0% - 100%) y doble clic en el lienzo para reemplazar el archivo al instante.
+- **Filtro Térmico Monocromático (1-bit B&W):** Simulación y procesamiento de umbral de blanco y negro (Threshold 0-255 e inversión negativo) para previsualizar exactamente cómo se imprimirá en cabezales térmicos.
+- **Transpilación ZPL II Nativa (`^GFA`):** Generación automática de gráficos de mapa de bits monocromáticos en formato ASCII Hex de Zebra para imprimir logos nítidos en impresoras industriales sin drivers externos.
+
+### 4. Impresión Térmica en Rollo Continuo (ZPL II)
 - Generación de comandos ZPL II nativos optimizados (`^XA ... ^XZ`) listos para enviar por red (puerto 9100), USB o archivo `.zpl`.
 - Traducción precisa de coordenadas, fuentes, tipografías Zebra (Fuentes 0, A-Z), dimensiones de barras e identificadores QR (`^BQ`, `^BX`, `^BC`).
 - Visor de código ZPL en vivo, copiado al portapapeles y selector de densidad de impresión (203 / 300 / 600 DPI).
 
-### 4. Impresión en Hoja / Matriz (Carta, A4, Avery)
+### 5. Impresión en Hoja / Matriz (Carta, A4, Avery)
 - Motor especializado `SheetPrintEngine` para pliegos de etiquetas adhesivas en impresoras convencionales (Láser, Tinta o Guardar como PDF).
 - **Presets Integrados:**
   - Micro-etiquetas: **5 Columnas × 18 Filas (90 etiquetas por pliego)**.
@@ -60,7 +68,7 @@ Soporte de más de 39 simbologías profesionales procesadas en tiempo real media
 - **Vista Previa WYSIWYG Multihahoja:** Modal interactivo con zoom, cambio de páginas y representación visual de bordes y marcas de corte.
 - **Fidelidad `@media print`:** Invocación limpia de `window.print()` que oculta la UI y transfiere exclusivamente la hoja vectorial a escala 1:1.
 
-### 5. Motor de Datos y Variables Reactivas
+### 6. Motor de Datos y Variables Reactivas
 - Sintaxis de interpolación fluida mediante doble llave: `{{nombre_campo}}`.
 - **`FormatEngine`:** Reconocimiento de tipos y aplicación de máscaras inteligentes:
   - Divisas: `$#,##0.00`, `$#,##0 MXN`, `USD`, `EUR`.
@@ -70,7 +78,7 @@ Soporte de más de 39 simbologías profesionales procesadas en tiempo real media
 - **Scrubber de Registros:** Navegación registro a registro (`< 1 de 45 >`) para verificar cómo se adapta el diseño en cada caso.
 - **Alertas de Desbordamiento:** Detección automática en tiempo real si un dato excede el ancho o alto de su caja de texto.
 
-### 6. Gestión Documental (.labellove)
+### 7. Gestión Documental (.labellove)
 - Formato de archivo JSON abierto y versionado (`.labellove`).
 - Guardado en disco con nombre personalizado y recuperación mediante diálogo nativo o Drag & Drop directo sobre el lienzo.
 - Autoguardado periódico en `localStorage` con recuperación automática tras recargas accidentales.
@@ -261,6 +269,7 @@ Haz clic en **"Go Live"** desde la barra de estado en el archivo `index.html`.
 | `Cmd + Z` / `Ctrl + Z` | Deshacer última modificación |
 | `Cmd + Shift + Z` / `Ctrl + Y` | Rehacer modificación |
 | `Supr` / `Backspace` | Eliminar elemento seleccionado |
+| `I` | Añadir nuevo elemento de imagen o pictograma |
 | `Espacio + Arrastre` | Paneo libre del lienzo |
 | `Clic Central + Arrastre` | Paneo estilo Inkscape / CAD |
 | `Escape` | Cerrar modal activo o deseleccionar elemento |
