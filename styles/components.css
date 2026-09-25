@@ -2094,5 +2094,362 @@
   display: inline-block;
 }
 
+/* Numeric Mask Badge & Preview */
+.numeric-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
 
+.mask-preview-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.mask-preview-box strong {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-primary);
+}
+
+/* --------------------------------------------------------------------------
+   14. Sheet & Matrix Print Modal (Carta / A4 / Sistema)
+   -------------------------------------------------------------------------- */
+.sheet-print-modal {
+  max-width: 1280px;
+  width: 96vw;
+  height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-modal-body {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sheet-modal-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Left Controls Column */
+.sheet-controls-col {
+  width: 370px;
+  min-width: 350px;
+  max-width: 390px;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sheet-settings-group {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.sheet-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.sheet-badges-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.sheet-badge-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.sheet-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-main);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sheet-checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+}
+
+/* Right Preview Viewport */
+.sheet-preview-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0b0d13;
+}
+
+.sheet-preview-toolbar {
+  height: 44px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  user-select: none;
+}
+
+.sheet-toolbar-left, .sheet-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-tb-btn {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.sheet-tb-btn:hover:not(:disabled) {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.sheet-tb-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sheet-tb-btn.btn-text-tb {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+}
+
+.sheet-tb-page-info {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  min-width: 80px;
+  text-align: center;
+}
+
+.sheet-tb-zoom-level {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 44px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+.sheet-preview-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.sheet-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.sheet-preview-zoom-wrapper {
+  transform-origin: top center;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Sheet Paper Styling in Preview */
+.sheet-print-page.for-preview {
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  position: relative;
+  border-radius: 2px;
+}
+
+.sheet-label-cell {
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.sheet-label-cell.has-cut-guide {
+  outline: 0.5px dashed rgba(0, 0, 0, 0.22);
+}
+
+.sheet-label-cell.cell-skipped {
+  background: repeating-linear-gradient(45deg, #f8f9fa, #f8f9fa 6px, #e9ecef 6px, #e9ecef 12px) !important;
+  opacity: 0.7;
+}
+
+.cell-skipped-badge {
+  font-size: 8px;
+  font-weight: 600;
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 5px;
+  border-radius: 2px;
+  border: 1px dashed #9ca3af;
+}
+
+.sheet-label-cell.cell-empty {
+  opacity: 0.25;
+}
+
+.cell-num-badge {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: 7px;
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.sheet-footer-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sheet-footer-summary .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+/* --------------------------------------------------------------------------
+   Physical System Printing Styles (@media print)
+   -------------------------------------------------------------------------- */
+#sheetPrintArea {
+  display: none;
+}
+
+@media print {
+  /* When printing sheet matrix */
+  body.is-printing-sheet > *:not(#sheetPrintArea) {
+    display: none !important;
+  }
+
+  body.is-printing-sheet {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  #sheetPrintArea {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sheet-print-page.for-print {
+    display: block !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    overflow: hidden !important;
+  }
+
+  .sheet-print-page.for-print:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .sheet-print-page.for-print .sheet-label-cell.has-cut-guide {
+    outline: 0.5px dashed rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .sheet-print-page.for-print .sheet-label-cell:not(.has-cut-guide) {
+    outline: none !important;
+  }
+
+  .sheet-print-page.for-print .cell-skipped,
+  .sheet-print-page.for-print .cell-empty {
+    background: transparent !important;
+    outline: none !important;
+  }
+
+  .barcode-canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+}
 

@@ -237,28 +237,25 @@ export class CanvasEngine {
         elNode.style.textAlign = el.textAlign || 'left';
         if (el.fontStyle) elNode.style.fontStyle = el.fontStyle;
 
-        const interpolated = this.dataStore.interpolate(el.text, activeRecord);
+        const mask = el.mask === 'custom' ? el.customMask : el.mask;
+        const interpolated = this.dataStore.interpolate(el.text, activeRecord, mask);
         elNode.textContent = interpolated;
 
         if (el.text && el.text.includes('{{')) {
           elNode.classList.add('is-variable');
         }
       } 
-      else if (el.type === 'barcode') {
-        elNode.classList.add('el-barcode');
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        elNode.appendChild(svg);
-        const resolvedVal = this.dataStore.interpolate(el.value, activeRecord);
-        BarcodeEngine.renderBarcode(svg, resolvedVal, el.format || 'CODE128', {
-          width: 1.5 * this.zoom,
-          height: hPx * 0.7,
-          displayValue: el.displayValue !== false
+      else if (el.type === 'barcode' || el.type === 'qr') {
+        elNode.classList.add(el.type === 'qr' ? 'el-qr' : 'el-barcode');
+        const mask = el.mask === 'custom' ? el.customMask : el.mask;
+        const resolvedVal = this.dataStore.interpolate(el.value, activeRecord, mask);
+        const format = el.format || (el.type === 'qr' ? 'qrcode' : 'code128');
+        BarcodeEngine.renderCode(elNode, resolvedVal, format, {
+          width: wPx,
+          height: hPx,
+          displayValue: el.displayValue !== false,
+          zoom: this.zoom
         });
-      } 
-      else if (el.type === 'qr') {
-        elNode.classList.add('el-qr');
-        const resolvedVal = this.dataStore.interpolate(el.value, activeRecord);
-        BarcodeEngine.renderQRCode(elNode, resolvedVal, { width: wPx });
       } 
       else if (el.type === 'shape') {
         elNode.classList.add('el-shape', `shape-${el.shapeType || 'rect'}`);
@@ -352,10 +349,11 @@ export class CanvasEngine {
       if (fontSelect) fontSelect.value = el.fontFamily || 'Inter';
       if (sizeInput) sizeInput.value = el.fontSize || 12;
       if (boldBtn) boldBtn.classList.toggle('active', el.fontWeight === 'bold');
-    } else if (el.type === 'barcode') {
+    } else if (el.type === 'barcode' || el.type === 'qr') {
       if (textGroup) textGroup.style.display = 'none';
       if (barcodeGroup) barcodeGroup.style.display = 'flex';
-      if (formatSelect) formatSelect.value = el.format || 'CODE128';
+      const normFormat = BarcodeEngine.normalizeFormat(el.format || (el.type === 'qr' ? 'qrcode' : 'code128'));
+      if (formatSelect) formatSelect.value = normFormat;
     } else {
       if (textGroup) textGroup.style.display = 'none';
       if (barcodeGroup) barcodeGroup.style.display = 'none';

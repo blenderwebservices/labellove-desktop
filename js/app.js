@@ -8,6 +8,8 @@ import { TEMPLATES, STANDARD_PRESETS } from './templates.js';
 import { ZPLGenerator } from './zpl-generator.js';
 import { BarcodeEngine } from './barcode-engine.js';
 import { DocumentManager } from './document-manager.js';
+import { FormatEngine } from './format-engine.js';
+import { SheetPrintEngine } from './sheet-print-engine.js';
 
 class App {
   constructor() {
@@ -26,6 +28,11 @@ class App {
         this.syncPresetSelect(widthMm, heightMm);
         this.docManager?.setUnsavedChanges(true);
       }
+    });
+
+    this.sheetPrintEngine = new SheetPrintEngine({
+      canvasEngine: this.canvasEngine,
+      dataStore: this.dataStore
     });
 
     this.currentTemplateId = 'shipping_4x6';
@@ -59,6 +66,11 @@ class App {
       this.updateRecordScrubber();
       this.updateActiveTableRow();
       this.updateOverflowAlerts();
+      const selEl = this.canvasEngine.elements.find(e => e.id === this.canvasEngine.selectedElementId);
+      if (selEl && selEl.type === 'text') {
+        this.updateNumericDetectionUI(selEl);
+        this.updateMaskPreview(selEl);
+      }
       this.docManager?.setUnsavedChanges(true);
     });
 
@@ -301,7 +313,7 @@ class App {
     document.getElementById('scrubberPrevBtn')?.addEventListener('click', () => this.dataStore.prevRecord());
     document.getElementById('scrubberNextBtn')?.addEventListener('click', () => this.dataStore.nextRecord());
 
-    // Print & ZPL Dialog
+    // Print & ZPL Dialog (Roll / Thermal)
     const printModal = document.getElementById('printModal');
     document.getElementById('topbarPrintBtn')?.addEventListener('click', () => {
       this.openPrintModal();
@@ -324,7 +336,18 @@ class App {
       a.click();
     });
 
-    // Native Browser Print Dialog simulation
+    // Switch from thermal/roll dialog to sheet print dialog
+    document.getElementById('switchToSheetPrintBtn')?.addEventListener('click', () => {
+      printModal?.classList.remove('is-open');
+      this.sheetPrintEngine.open();
+    });
+
+    // Sheet / Matrix Print Dialog (Carta / A4 / Sistema)
+    document.getElementById('topbarSheetPrintBtn')?.addEventListener('click', () => {
+      this.sheetPrintEngine.open();
+    });
+
+    // Native Browser Print Dialog simulation (Thermal / Roll)
     document.getElementById('nativePrintBtn')?.addEventListener('click', () => {
       window.print();
     });
@@ -366,10 +389,14 @@ class App {
 
     document.getElementById('hudBarcodeFormat')?.addEventListener('change', (e) => {
       const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
-      if (el && el.type === 'barcode') {
-        el.format = e.target.value;
+      if (el && (el.type === 'barcode' || el.type === 'qr')) {
+        const newFormat = e.target.value;
+        const sym = BarcodeEngine.getSymbology(newFormat);
+        el.format = newFormat;
+        el.type = sym.is2D ? 'qr' : 'barcode';
         this.canvasEngine.renderElements();
         this.updateInspectorValues(el);
+        this.docManager.setUnsavedChanges(true);
       }
     });
   }
@@ -419,6 +446,49 @@ class App {
       if (el) {
         el.text = e.target.value;
         this.canvasEngine.renderElements();
+        this.updateNumericDetectionUI(el);
+        this.updateMaskPreview(el);
+        this.docManager.setUnsavedChanges(true);
+      }
+    });
+
+    // Number Mask Preset Dropdown
+    document.getElementById('propNumberMaskPreset')?.addEventListener('change', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el) {
+        const val = e.target.value;
+        const customRow = document.getElementById('propCustomMaskRow');
+        const customInput = document.getElementById('propCustomMask');
+
+        if (val === 'custom') {
+          el.mask = 'custom';
+          el.customMask = customInput?.value || '$#,##0.00';
+          if (customRow) customRow.style.display = 'flex';
+        } else if (val) {
+          el.mask = val;
+          delete el.customMask;
+          if (customRow) customRow.style.display = 'none';
+        } else {
+          delete el.mask;
+          delete el.customMask;
+          if (customRow) customRow.style.display = 'none';
+        }
+
+        this.canvasEngine.renderElements();
+        this.updateMaskPreview(el);
+        this.docManager.setUnsavedChanges(true);
+      }
+    });
+
+    // Custom Mask Text Input
+    document.getElementById('propCustomMask')?.addEventListener('input', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el) {
+        el.mask = 'custom';
+        el.customMask = e.target.value;
+        this.canvasEngine.renderElements();
+        this.updateMaskPreview(el);
+        this.docManager.setUnsavedChanges(true);
       }
     });
 
@@ -434,10 +504,30 @@ class App {
     // Barcode Symbology Dropdown
     document.getElementById('propBarcodeFormat')?.addEventListener('change', (e) => {
       const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
-      if (el && el.type === 'barcode') {
-        el.format = e.target.value;
+      if (el && (el.type === 'barcode' || el.type === 'qr')) {
+        const newFormat = e.target.value;
+        const sym = BarcodeEngine.getSymbology(newFormat);
+        el.format = newFormat;
+        el.type = sym.is2D ? 'qr' : 'barcode';
+        
+        // If current value is empty or generic sample of another category, suggest format default sample
+        if (!el.value || el.value === 'SAMPLE-128' || el.value === '750103131000' || el.value === 'https://labellove.test') {
+          el.value = sym.defaultSample;
+        }
+
         this.canvasEngine.renderElements();
         this.updateInspectorValues(el);
+        this.docManager.setUnsavedChanges(true);
+      }
+    });
+
+    // Checkbox for Human Readable Text toggle
+    document.getElementById('propDisplayValue')?.addEventListener('change', (e) => {
+      const el = this.canvasEngine.elements.find(item => item.id === this.canvasEngine.selectedElementId);
+      if (el) {
+        el.displayValue = e.target.checked;
+        this.canvasEngine.renderElements();
+        this.docManager.setUnsavedChanges(true);
       }
     });
 
@@ -453,6 +543,7 @@ class App {
         }
         this.canvasEngine.renderElements();
         this.updateInspectorValues(el);
+        this.docManager.setUnsavedChanges(true);
       }
     });
 
@@ -537,38 +628,57 @@ class App {
 
     const textSection = document.getElementById('sectionTextProperties');
     const barcodeSection = document.getElementById('sectionBarcodeProperties');
+    const maskSection = document.getElementById('sectionNumberMask');
 
     if (el.type === 'text') {
       if (textSection) textSection.style.display = 'flex';
       if (barcodeSection) barcodeSection.style.display = 'none';
+      if (maskSection) maskSection.style.display = 'flex';
       document.getElementById('propTextContent').value = el.text || '';
+      this.updateNumericDetectionUI(el);
+      this.updateMaskPreview(el);
     } else if (el.type === 'barcode' || el.type === 'qr') {
       if (textSection) textSection.style.display = 'none';
       if (barcodeSection) barcodeSection.style.display = 'flex';
+      if (maskSection) maskSection.style.display = 'none';
       document.getElementById('propCodeValue').value = el.value || '';
       
+      const normFormat = BarcodeEngine.normalizeFormat(el.format || (el.type === 'qr' ? 'qrcode' : 'code128'));
+      const sym = BarcodeEngine.getSymbology(normFormat);
+
       const formatDropdown = document.getElementById('propBarcodeFormat');
       if (formatDropdown) {
-        formatDropdown.style.display = el.type === 'barcode' ? 'block' : 'none';
-        formatDropdown.value = el.format || 'CODE128';
+        formatDropdown.style.display = 'block';
+        formatDropdown.value = normFormat;
+      }
+
+      // Show/hide displayValue checkbox for 1D barcodes vs 2D codes
+      const displayValueRow = document.getElementById('propDisplayValueRow');
+      const displayValueCheckbox = document.getElementById('propDisplayValue');
+      if (displayValueRow) {
+        displayValueRow.style.display = sym.is2D ? 'none' : 'flex';
+      }
+      if (displayValueCheckbox) {
+        displayValueCheckbox.checked = el.displayValue !== false;
       }
 
       // Update Scanner Optical Readability Gauge
       const gauge = document.getElementById('scannerGauge');
-      if (gauge && el.type === 'barcode') {
-        const evalResult = BarcodeEngine.evaluateReadability(el.widthMm, el.format || 'CODE128', this.canvasEngine.currentTemplate.dpi);
+      if (gauge) {
+        const evalResult = BarcodeEngine.evaluateReadability(el.widthMm, normFormat, this.canvasEngine.currentTemplate.dpi);
         gauge.className = `scanner-gauge ${evalResult.isGood ? '' : 'warning'}`;
         gauge.innerHTML = `
           <span>${evalResult.isGood ? '✓' : '⚠️'}</span>
           <div>
             <strong>${evalResult.label}</strong>
-            <div style="font-size: 10px; opacity: 0.85;">Módulo: ${evalResult.mils} mils (${evalResult.dots} dots)</div>
+            <div style="font-size: 10px; opacity: 0.85;">Módulo: ${evalResult.mils} (${evalResult.dots})</div>
           </div>
         `;
       }
     } else {
       if (textSection) textSection.style.display = 'none';
       if (barcodeSection) barcodeSection.style.display = 'none';
+      if (maskSection) maskSection.style.display = 'none';
     }
 
     // Populate data binding options
@@ -583,6 +693,51 @@ class App {
         bindingSelect.appendChild(opt);
       });
     }
+  }
+
+  updateNumericDetectionUI(el) {
+    if (!el || el.type !== 'text') return;
+    const numInfo = FormatEngine.detectNumeric(el, this.dataStore);
+    const badge = document.getElementById('badgeNumericDetected');
+    const maskPresetSelect = document.getElementById('propNumberMaskPreset');
+    const customMaskRow = document.getElementById('propCustomMaskRow');
+    const customMaskInput = document.getElementById('propCustomMask');
+
+    if (badge) {
+      if (numInfo.isNumeric) {
+        badge.style.display = 'inline-flex';
+        badge.textContent = `✓ Numérico (${numInfo.value})`;
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    if (maskPresetSelect) {
+      const currentMask = el.mask || '';
+      if (currentMask === 'custom') {
+        maskPresetSelect.value = 'custom';
+        if (customMaskRow) customMaskRow.style.display = 'flex';
+        if (customMaskInput) customMaskInput.value = el.customMask || '';
+      } else {
+        maskPresetSelect.value = currentMask;
+        if (customMaskRow) customMaskRow.style.display = 'none';
+      }
+    }
+  }
+
+  updateMaskPreview(el) {
+    const previewEl = document.getElementById('propMaskPreviewValue');
+    if (!previewEl || !el) return;
+    const mask = el.mask === 'custom' ? el.customMask : el.mask;
+    if (!mask) {
+      previewEl.textContent = '(Sin máscara activa)';
+      previewEl.style.opacity = '0.5';
+      return;
+    }
+    previewEl.style.opacity = '1';
+    const activeRec = this.dataStore.getActiveRecord();
+    const result = this.dataStore.interpolate(el.text || '', activeRec, mask);
+    previewEl.textContent = result || '-';
   }
 
   updateInspectorLabelSettings() {
@@ -800,13 +955,21 @@ class App {
       // Cmd+P / Ctrl+P
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
-        this.openPrintModal();
+        // Si el modal de hoja está abierto, ejecutar impresión
+        if (document.getElementById('sheetPrintModal')?.classList.contains('is-open')) {
+          this.sheetPrintEngine.executePrint();
+        } else if (this.canvasEngine.currentTemplate?.type === 'sheet') {
+          this.sheetPrintEngine.open();
+        } else {
+          this.openPrintModal();
+        }
       }
 
       // Escape
       if (e.key === 'Escape') {
         this.canvasEngine.selectElement(null);
         document.getElementById('printModal')?.classList.remove('is-open');
+        document.getElementById('sheetPrintModal')?.classList.remove('is-open');
         document.getElementById('recentProjectsModal')?.classList.remove('is-open');
         document.getElementById('openMenuDropdown')?.classList.remove('is-open');
         document.getElementById('unsavedChangesModal')?.classList.remove('is-open');

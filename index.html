@@ -15,7 +15,14 @@
   <link rel="stylesheet" href="styles/canvas.css">
   <link rel="stylesheet" href="styles/components.css">
 
-  <!-- Barcode & QR Generation Libraries via CDN (with built-in offline fallbacks) -->
+  <!-- Universal Barcode & 2D QR Engine via bwip-js (39+ symbologies: QR, Micro QR, GS1 QR, HIBC QR, Data Matrix, PDF417, EAN, UPC, etc.) -->
+  <script src="js/vendor/bwip-js-min.js"></script>
+  <script>
+    if (typeof bwipjs === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/bwip-js@3.4.4/dist/bwip-js-min.js"><\/script>');
+    }
+  </script>
+  <!-- Barcode & QR Generation Fallback Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Excel (.xlsx, .xls) and CSV parsing engine via SheetJS -->
@@ -188,9 +195,14 @@
       </div>
 
       <!-- Quick Action Buttons -->
-      <button class="btn-primary" id="topbarPrintBtn">
-        <span>🖨️</span>
-        <span>Imprimir / ZPL</span>
+      <button class="btn-secondary" id="topbarPrintBtn" title="Imprimir en rollo individual o exportar código ZPL para impresora térmica (Zebra, TSC, Rollo)">
+        <span>🏷️</span>
+        <span>Rollo (ZPL)</span>
+      </button>
+
+      <button class="btn-primary" id="topbarSheetPrintBtn" title="Imprimir en hoja/pliego de papel matriz (Carta, A4, Avery) usando impresoras del sistema">
+        <span>📄</span>
+        <span>Imprimir en Hoja</span>
       </button>
     </div>
   </header>
@@ -304,11 +316,53 @@
             </div>
 
             <div id="hudBarcodeControls" style="display: none; align-items: center; gap: 4px;">
-              <select class="hud-select" id="hudBarcodeFormat">
-                <option value="CODE128">Code 128 (Estándar)</option>
-                <option value="EAN13">EAN-13 (Comercio)</option>
-                <option value="UPCA">UPC-A (Retail USA)</option>
-                <option value="CODE39">Code 39</option>
+              <select class="hud-select" id="hudBarcodeFormat" style="max-width: 180px;">
+                <optgroup label="── Códigos QR (2D) ──">
+                  <option value="qrcode">QR Code</option>
+                  <option value="microqrcode">Micro QR Code</option>
+                  <option value="gs1qrcode">GS1 QR Code</option>
+                  <option value="hibcqrcode">HIBC QR Code</option>
+                </optgroup>
+                <optgroup label="── Matrices 2D ──">
+                  <option value="datamatrix">Data Matrix</option>
+                  <option value="datamatrixrectangular">Data Matrix Rect.</option>
+                  <option value="gs1datamatrix">GS1 Data Matrix</option>
+                  <option value="hibcdatamatrix">HIBC Data Matrix</option>
+                  <option value="pdf417">PDF417</option>
+                  <option value="pdf417compact">PDF417 - Compact</option>
+                  <option value="micropdf417">PDF417 - Micro</option>
+                </optgroup>
+                <optgroup label="── Retail & Comercio ──">
+                  <option value="ean13">EAN-13</option>
+                  <option value="ean8">EAN-8</option>
+                  <option value="upca">UPC-A</option>
+                  <option value="upce">UPC-E</option>
+                  <option value="isbn">ISBN</option>
+                  <option value="itf14">ITF-14 (GS1-14)</option>
+                  <option value="gs1-128">GS1-128</option>
+                  <option value="sscc18">SSCC-18</option>
+                  <option value="databaromni">GS1 DataBar Omni</option>
+                  <option value="databarstacked">GS1 DataBar Stacked</option>
+                  <option value="databarexpanded">GS1 DataBar Exp.</option>
+                </optgroup>
+                <optgroup label="── Industriales (1D) ──">
+                  <option value="code128">Code 128</option>
+                  <option value="code39">Code 39</option>
+                  <option value="code39ext">Code 39 Ext.</option>
+                  <option value="code93">Code 93</option>
+                  <option value="code11">Code 11</option>
+                  <option value="codabar">Codabar</option>
+                  <option value="interleaved2of5">ITF 2 of 5</option>
+                  <option value="msi">MSI Plessey</option>
+                  <option value="hibccode128">HIBC Code 128</option>
+                  <option value="hibccode39">HIBC Code 39</option>
+                </optgroup>
+                <optgroup label="── Postales ──">
+                  <option value="onecode">USPS Intelligent Mail</option>
+                  <option value="postnet">USPS POSTNET</option>
+                  <option value="royalmail">Royal Mail 4 State</option>
+                  <option value="kix">Royal Dutch KIX</option>
+                </optgroup>
               </select>
             </div>
 
@@ -387,25 +441,138 @@
             <textarea class="text-input" id="propTextContent" rows="3" placeholder="Escribe el texto o {{ variable }}"></textarea>
           </div>
 
+          <!-- Numeric Mask Section -->
+          <div class="inspector-section" id="sectionNumberMask" style="display: none;">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Máscara Numérica</span>
+              <span class="numeric-badge" id="badgeNumericDetected" style="display: none;">✓ Numérico detectado</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <select class="select-input" id="propNumberMaskPreset">
+                <option value="">-- Sin máscara (Original) --</option>
+                <optgroup label="── Moneda / Divisa ──">
+                  <option value="$#,##0.00">$12,345.00 (Moneda con 2 decimales)</option>
+                  <option value="$#,##0">$12,345 (Moneda sin decimales)</option>
+                  <option value="$#,##0.00 MXN">$12,345.00 MXN</option>
+                  <option value="USD $#,##0.00">USD $12,345.00</option>
+                  <option value="€#,##0.00">€12,345.00 (Euro)</option>
+                </optgroup>
+                <optgroup label="── Porcentajes e Impuestos ──">
+                  <option value="0% IVA">16% IVA (0.16 -> 16% IVA)</option>
+                  <option value="0.0% IVA">16.0% IVA (con 1 decimal)</option>
+                  <option value="0.00% IVA">16.00% IVA (con 2 decimales)</option>
+                  <option value="0%">16% (Porcentaje entero)</option>
+                  <option value="0.00%">16.00% (Porcentaje con decimales)</option>
+                  <option value="#% Descuento">16% Descuento</option>
+                </optgroup>
+                <optgroup label="── Números y Millares ──">
+                  <option value="#,##0">12,345 (Separador de miles)</option>
+                  <option value="#,##0.00">12,345.00 (Miles y 2 decimales)</option>
+                  <option value="#,##0.0">12,345.0 (Miles y 1 decimal)</option>
+                  <option value="0.00">12345.00 (2 decimales fijos)</option>
+                  <option value="0.000">12345.000 (3 decimales fijos)</option>
+                </optgroup>
+                <optgroup label="── Relleno de Ceros (Padding) ──">
+                  <option value="00000">00123 (Relleno a 5 dígitos)</option>
+                  <option value="000000">000123 (Relleno a 6 dígitos)</option>
+                  <option value="00000000">00000123 (Relleno a 8 dígitos)</option>
+                </optgroup>
+                <optgroup label="── Unidades y Cantidades ──">
+                  <option value="#,##0 pzas">12,345 pzas</option>
+                  <option value="#,##0 kg">12,345 kg</option>
+                  <option value="#,##0.00 kg">12,345.00 kg</option>
+                  <option value="# unidades">12345 unidades</option>
+                </optgroup>
+                <optgroup label="── Personalizada ──">
+                  <option value="custom">Personalizada...</option>
+                </optgroup>
+              </select>
+
+              <!-- Custom mask input row -->
+              <div id="propCustomMaskRow" style="display: none; flex-direction: column; gap: 4px;">
+                <input type="text" class="text-input" id="propCustomMask" placeholder="Ej: $#,##0.00 o 0% IVA o SKU-00000">
+                <span style="font-size: 10px; color: var(--text-faint);">
+                  Usa <code>#</code> (opcional), <code>0</code> (cero/relleno), <code>%</code> (x100), o texto libre.
+                </span>
+              </div>
+
+              <!-- Live preview row -->
+              <div class="mask-preview-box" id="propMaskPreviewRow">
+                <span style="color: var(--text-faint);">Resultado:</span>
+                <strong id="propMaskPreviewValue">-</strong>
+              </div>
+            </div>
+          </div>
+
           <!-- Barcode / QR Properties -->
           <div class="inspector-section" id="sectionBarcodeProperties" style="display: none;">
             <div class="section-header">
               <span>Código & Simbología</span>
             </div>
             <select class="select-input" id="propBarcodeFormat">
-              <option value="CODE128">Code 128 (Alta densidad)</option>
-              <option value="EAN13">EAN-13 (GS1 Retail)</option>
-              <option value="UPCA">UPC-A (Norteamérica)</option>
-              <option value="CODE39">Code 39 (Industrial)</option>
+              <optgroup label="── Códigos QR (2D) ──">
+                <option value="qrcode">QR Code (Estándar ISO/IEC 18004)</option>
+                <option value="microqrcode">Micro QR Code (Ultracompacto)</option>
+                <option value="gs1qrcode">GS1 QR Code (Retail & Digital Link)</option>
+                <option value="hibcqrcode">HIBC QR Code (Salud / Dispositivos)</option>
+              </optgroup>
+              <optgroup label="── Matrices 2D ──">
+                <option value="datamatrix">Data Matrix (Industrial)</option>
+                <option value="datamatrixrectangular">Data Matrix Rectangular</option>
+                <option value="gs1datamatrix">GS1 Data Matrix (Farmacéutico)</option>
+                <option value="hibcdatamatrix">HIBC Data Matrix</option>
+                <option value="hibcdatamatrixrectangular">HIBC Data Matrix Rectangular</option>
+                <option value="pdf417">PDF417 (Alta capacidad)</option>
+                <option value="pdf417compact">PDF417 - Compact</option>
+                <option value="micropdf417">PDF417 - Micro</option>
+              </optgroup>
+              <optgroup label="── Retail & Comercio (EAN/UPC/GS1) ──">
+                <option value="ean13">EAN-13 (Comercio mundial)</option>
+                <option value="ean8">EAN-8 (Empaques pequeños)</option>
+                <option value="upca">UPC-A (Norteamérica / USA)</option>
+                <option value="upce">UPC-E (Comprimido)</option>
+                <option value="isbn">ISBN (Libros y editorial)</option>
+                <option value="itf14">ITF-14 / GS1-14 (Cajas corrugadas)</option>
+                <option value="gs1-128">GS1-128 (Palets y logística)</option>
+                <option value="sscc18">SSCC-18 (Contenedor de envío)</option>
+                <option value="databaromni">GS1 DataBar Omnidirectional</option>
+                <option value="databarstacked">GS1 DataBar Stacked</option>
+                <option value="databarexpanded">GS1 DataBar Expanded</option>
+                <option value="databarexpandedstacked">GS1 DataBar Expanded Stacked</option>
+              </optgroup>
+              <optgroup label="── Industriales & Logística (1D) ──">
+                <option value="code128">Code 128 (Alta densidad)</option>
+                <option value="code39">Code 39 (Industrial)</option>
+                <option value="code39ext">Code 39 Extended (Full ASCII)</option>
+                <option value="code93">Code 93</option>
+                <option value="code11">Code 11</option>
+                <option value="codabar">Codabar (Bancos de sangre / Fedex)</option>
+                <option value="interleaved2of5">Interleaved 2 of 5 (ITF)</option>
+                <option value="msi">MSI Modified Plessey</option>
+                <option value="hibccode128">HIBC Code 128</option>
+                <option value="hibccode39">HIBC Code 39</option>
+              </optgroup>
+              <optgroup label="── Postales & Envíos ──">
+                <option value="onecode">USPS Intelligent Mail (IMb)</option>
+                <option value="postnet">USPS POSTNET</option>
+                <option value="royalmail">Royal Mail 4 State</option>
+                <option value="kix">Royal Dutch TPG Post KIX</option>
+              </optgroup>
             </select>
             <input type="text" class="text-input" id="propCodeValue" placeholder="Valor del código">
             
+            <!-- Checkbox for Human Readable Text (for linear barcodes) -->
+            <label class="excel-checkbox-label" id="propDisplayValueRow" style="font-size: 11px; margin-top: 2px; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" id="propDisplayValue" checked>
+              <span>Mostrar texto legible debajo</span>
+            </label>
+
             <!-- Scanner Readability Gauge -->
             <div class="scanner-gauge" id="scannerGauge">
-              <span>✓</span>
+              <span id="scannerGaugeIcon">✓</span>
               <div>
-                <strong>Excelente lectura óptica</strong>
-                <div style="font-size: 10px; opacity: 0.85;">Módulo: 12.5 mils (2.5 dots @ 203 DPI)</div>
+                <strong id="scannerGaugeStatus">Excelente lectura óptica</strong>
+                <div style="font-size: 10px; opacity: 0.85;" id="scannerGaugeDetails">Módulo: 12.5 mils (2.5 dots @ 203 DPI)</div>
               </div>
             </div>
           </div>
@@ -580,6 +747,17 @@
             <span>Descargar Archivo .ZPL</span>
           </button>
         </div>
+
+        <div style="margin-top: 14px; padding: 10px 14px; background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.35); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-main);">¿Deseas imprimir en papel Carta o A4?</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Distribuye múltiples etiquetas en una cuadrícula (ej. 5×18, 3×10 Avery).</div>
+          </div>
+          <button type="button" class="btn-secondary btn-sm" id="switchToSheetPrintBtn" style="white-space: nowrap;">
+            <span>📄</span>
+            <span>Imprimir en Hoja</span>
+          </button>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -590,6 +768,267 @@
           <span>🖨️</span>
           <span>Imprimir con Diálogo del Sistema</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       6.1 Sheet & Matrix Printing Modal (Carta / A4 / Avery / Sistema)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="sheetPrintModal">
+    <div class="modal-window modal-xl sheet-print-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-title-icon">📄</span>
+          <div>
+            <div style="font-size: 16px; font-weight: 700; line-height: 1.2;">Impresión en Hoja / Matriz (Carta, A4, Avery)</div>
+            <div style="font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 2px;">
+              Distribuye tus etiquetas en cuadrícula matricial e imprime directamente con cualquier impresora del sistema
+            </div>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeSheetPrintModalBtn">✕</button>
+      </div>
+
+      <div class="modal-body sheet-modal-body">
+        <!-- Split Layout: Left Controls, Right Preview -->
+        <div class="sheet-modal-layout">
+          
+          <!-- LEFT: Controls Column -->
+          <div class="sheet-controls-col">
+            <!-- 1. Formato de Papel -->
+            <div class="sheet-settings-group">
+              <div class="sheet-group-title">
+                <span>📄</span>
+                <span>Formato de Papel</span>
+              </div>
+              <div class="form-group-row">
+                <div class="form-field-group" style="flex: 2;">
+                  <label for="sheetPaperSize">Tamaño de Hoja</label>
+                  <select id="sheetPaperSize" class="form-select">
+                    <option value="letter" selected>Carta / US Letter (215.9 × 279.4 mm)</option>
+                    <option value="a4">A4 Internacional (210 × 297 mm)</option>
+                    <option value="legal">Oficio / Legal (215.9 × 355.6 mm)</option>
+                    <option value="custom">Personalizado...</option>
+                  </select>
+                </div>
+                <div class="form-field-group" style="flex: 1.2;">
+                  <label for="sheetOrientation">Orientación</label>
+                  <select id="sheetOrientation" class="form-select">
+                    <option value="portrait" selected>Vertical</option>
+                    <option value="landscape">Horizontal</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group-row" id="sheetCustomDimsRow" style="display: none; margin-top: 6px;">
+                <div class="form-field-group">
+                  <label for="sheetCustomWidth">Ancho (mm)</label>
+                  <input type="number" id="sheetCustomWidth" class="form-input" value="215.9" step="0.5" min="50">
+                </div>
+                <div class="form-field-group">
+                  <label for="sheetCustomHeight">Alto (mm)</label>
+                  <input type="number" id="sheetCustomHeight" class="form-input" value="279.4" step="0.5" min="50">
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Distribución en Matriz -->
+            <div class="sheet-settings-group">
+              <div class="sheet-group-title">
+                <span>📐</span>
+                <span>Distribución en Matriz</span>
+              </div>
+              <div class="form-field-group" style="margin-bottom: 8px;">
+                <label for="sheetMatrixPreset">Plantilla o Preset</label>
+                <select id="sheetMatrixPreset" class="form-select">
+                  <option value="matrix_5x18" selected>5 Columnas × 18 Filas (90 etiquetas) - Micro</option>
+                  <option value="matrix_3x10">3 Columnas × 10 Filas (Avery® 5160 - 30 etiquetas)</option>
+                  <option value="matrix_2x5">2 Columnas × 5 Filas (Avery® 5163 - 10 etiquetas)</option>
+                  <option value="matrix_2x3">2 Columnas × 3 Filas (Avery® 5164 - 6 etiquetas)</option>
+                  <option value="matrix_4x10">4 Columnas × 10 Filas (40 etiquetas)</option>
+                  <option value="matrix_4x15">4 Columnas × 15 Filas (60 etiquetas)</option>
+                  <option value="custom">Personalizada (Filas y Columnas libres)</option>
+                </select>
+              </div>
+
+              <div class="form-group-row">
+                <div class="form-field-group">
+                  <label for="sheetCols">Columnas</label>
+                  <input type="number" id="sheetCols" class="form-input" value="5" min="1" max="30">
+                </div>
+                <div class="form-field-group">
+                  <label for="sheetRows">Filas</label>
+                  <input type="number" id="sheetRows" class="form-input" value="18" min="1" max="60">
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button type="button" class="btn-secondary btn-sm" id="sheetBtnAutoCalcGrid" style="flex: 1;" title="Calcula cuántas etiquetas del tamaño actual caben en la hoja">
+                  <span>⚡</span>
+                  <span>Auto-calcular según etiqueta actual</span>
+                </button>
+              </div>
+
+              <div class="sheet-badges-row">
+                <span class="sheet-badge-pill" id="sheetTotalLabelsBadge">90 etiquetas / hoja</span>
+                <span class="sheet-badge-pill" id="sheetCellDimBadge">38.4 × 13.5 mm</span>
+              </div>
+            </div>
+
+            <!-- 3. Márgenes y Separación -->
+            <div class="sheet-settings-group">
+              <div class="sheet-group-title">
+                <span>📏</span>
+                <span>Márgenes y Separaciones (mm)</span>
+              </div>
+              <div class="form-group-row form-grid-4">
+                <div class="form-field-group">
+                  <label for="sheetMarginTop">Sup.</label>
+                  <input type="number" id="sheetMarginTop" class="form-input" value="8" min="0" max="100" step="0.5">
+                </div>
+                <div class="form-field-group">
+                  <label for="sheetMarginBottom">Inf.</label>
+                  <input type="number" id="sheetMarginBottom" class="form-input" value="8" min="0" max="100" step="0.5">
+                </div>
+                <div class="form-field-group">
+                  <label for="sheetMarginLeft">Izq.</label>
+                  <input type="number" id="sheetMarginLeft" class="form-input" value="6" min="0" max="100" step="0.5">
+                </div>
+                <div class="form-field-group">
+                  <label for="sheetMarginRight">Der.</label>
+                  <input type="number" id="sheetMarginRight" class="form-input" value="6" min="0" max="100" step="0.5">
+                </div>
+              </div>
+              <div class="form-group-row" style="margin-top: 6px;">
+                <div class="form-field-group">
+                  <label for="sheetGapX">Espacio Horizontal (Gap X)</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="sheetGapX" class="form-input" value="1.5" min="0" max="50" step="0.5">
+                    <span class="input-suffix">mm</span>
+                  </div>
+                </div>
+                <div class="form-field-group">
+                  <label for="sheetGapY">Espacio Vertical (Gap Y)</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="sheetGapY" class="form-input" value="1.0" min="0" max="50" step="0.5">
+                    <span class="input-suffix">mm</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Ajuste del Diseño a la Celda -->
+            <div class="sheet-settings-group">
+              <div class="sheet-group-title">
+                <span>🔍</span>
+                <span>Escala del Diseño en Celda</span>
+              </div>
+              <div class="form-field-group">
+                <label for="sheetFitMode">Modo de Ajuste</label>
+                <select id="sheetFitMode" class="form-select">
+                  <option value="fit" selected>Ajustar proporcionalmente (Recomendado)</option>
+                  <option value="fill">Estirar hasta llenar celda</option>
+                  <option value="original">Tamaño original 1:1 (Centrado)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 5. Datos & Cantidad -->
+            <div class="sheet-settings-group">
+              <div class="sheet-group-title">
+                <span>📊</span>
+                <span>Origen de Datos & Cantidad</span>
+              </div>
+              <div class="form-field-group" style="margin-bottom: 8px;">
+                <label for="sheetDataMode">Modo de Datos</label>
+                <select id="sheetDataMode" class="form-select">
+                  <option value="single" selected>Repetir etiqueta actual (Registro Activo)</option>
+                  <option value="dataset">Secuencial de la tabla de datos (Data Store)</option>
+                </select>
+              </div>
+
+              <div class="form-group-row" id="sheetCopiesRow">
+                <div class="form-field-group">
+                  <label for="sheetCopies">Cantidad de Etiquetas a Imprimir</label>
+                  <input type="number" id="sheetCopies" class="form-input" value="90" min="1" max="5000">
+                </div>
+              </div>
+
+              <div id="sheetDatasetInfo" style="display: none; padding: 8px 10px; background: rgba(99, 102, 241, 0.1); border-radius: var(--radius-sm); font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">
+                Imprime un registro por etiqueta. <strong id="sheetDatasetCountBadge" style="color: var(--accent-primary);">5 registros</strong> disponibles. Se generarán páginas automáticamente.
+              </div>
+            </div>
+
+            <!-- 6. Posición de Inicio & Opciones -->
+            <div class="sheet-settings-group">
+              <div class="sheet-group-title">
+                <span>🎯</span>
+                <span>Inicio & Guías de Corte</span>
+              </div>
+              <div class="form-field-group">
+                <label for="sheetStartCell">Comenzar en la celda #</label>
+                <input type="number" id="sheetStartCell" class="form-input" value="1" min="1" max="1000" title="Saltar etiquetas ya despegadas o usadas previamente">
+                <span style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
+                  Permite reutilizar pliegos adhesivos ya empezados saltando celdas vacías.
+                </span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                <label class="sheet-checkbox-label">
+                  <input type="checkbox" id="sheetCutGuides" checked>
+                  <span>Imprimir marcas / líneas tenues de corte</span>
+                </label>
+                <label class="sheet-checkbox-label">
+                  <input type="checkbox" id="sheetLabelNumbers">
+                  <span>Mostrar numeración de celdas en vista previa</span>
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT: Interactive Preview Viewport -->
+          <div class="sheet-preview-col">
+            <!-- Toolbar above sheet preview -->
+            <div class="sheet-preview-toolbar">
+              <div class="sheet-toolbar-left">
+                <button type="button" class="sheet-tb-btn" id="sheetBtnPrevPage" title="Hoja anterior" disabled>◀</button>
+                <span class="sheet-tb-page-info" id="sheetPageIndicator">Hoja 1 de 1</span>
+                <button type="button" class="sheet-tb-btn" id="sheetBtnNextPage" title="Hoja siguiente" disabled>▶</button>
+              </div>
+
+              <div class="sheet-toolbar-right">
+                <button type="button" class="sheet-tb-btn" id="sheetBtnZoomOut" title="Alejar">－</button>
+                <span class="sheet-tb-zoom-level" id="sheetZoomLevel">55%</span>
+                <button type="button" class="sheet-tb-btn" id="sheetBtnZoomIn" title="Acercar">＋</button>
+                <button type="button" class="sheet-tb-btn btn-text-tb" id="sheetBtnZoomFit" title="Ajustar tamaño a ventana">Ajustar</button>
+              </div>
+            </div>
+
+            <!-- Viewport with zoom canvas -->
+            <div class="sheet-preview-viewport" id="sheetPreviewViewport">
+              <div class="sheet-preview-container" id="sheetPreviewContainer">
+                <!-- Rendered dynamically by SheetPrintEngine -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="sheet-footer-summary">
+          <span class="status-dot"></span>
+          <span id="sheetSummaryText">Carta (Vertical) • 90 etiquetas en 1 hoja</span>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="btn-secondary" id="cancelSheetPrintBtn">Cancelar</button>
+          <button class="btn-primary" id="executeSheetPrintBtn">
+            <span>🖨️</span>
+            <span>Imprimir con Impresoras del Sistema</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -975,6 +1414,9 @@
 
   <!-- Hidden native file input for opening files -->
   <input type="file" id="fileOpenInput" accept=".labellove,.json" style="display: none;">
+
+  <!-- Physical Print Container for @media print (Hidden on screen) -->
+  <div id="sheetPrintArea" class="sheet-print-area" aria-hidden="true"></div>
 
   <!-- Main Application Entry Module -->
   <script type="module" src="js/app.js"></script>
