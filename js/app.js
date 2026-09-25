@@ -74,7 +74,8 @@ class App {
     this.updateRecordScrubber();
     this.updateOverflowAlerts();
 
-    // 3. Setup event listeners
+    // 3. Setup event listeners & responsive observers
+    this.setupResponsiveTopbar();
     this.setupUIEvents();
     this.setupInspectorEvents();
     this.setupKeyboardShortcuts();
@@ -95,6 +96,47 @@ class App {
     });
 
     console.log('⚡ LabelLove Application initialized successfully');
+  }
+
+  // ------------------------------------------------------------------------
+  // Responsive Topbar Height Synchronization & Layout Observer
+  // ------------------------------------------------------------------------
+  setupResponsiveTopbar() {
+    const topbar = document.querySelector('.topbar');
+    if (!topbar) return;
+
+    let lastHeight = 0;
+    const syncTopbarHeight = () => {
+      const h = topbar.offsetHeight;
+      if (h > 0 && h !== lastHeight) {
+        lastHeight = h;
+        document.documentElement.style.setProperty('--header-height', `${h}px`);
+        if (this.canvasEngine && typeof this.canvasEngine.renderRulers === 'function') {
+          this.canvasEngine.renderRulers();
+        }
+      }
+    };
+
+    // Immediate calculation
+    syncTopbarHeight();
+
+    // Use ResizeObserver for precise changes (font loading, wrapping, resizing)
+    if (typeof ResizeObserver !== 'undefined') {
+      this.topbarResizeObserver = new ResizeObserver(() => {
+        syncTopbarHeight();
+      });
+      this.topbarResizeObserver.observe(topbar);
+    }
+
+    // Window resize event fallback
+    window.addEventListener('resize', () => {
+      syncTopbarHeight();
+    });
+
+    // Also trigger on load to ensure fonts and styles are settled
+    window.addEventListener('load', () => {
+      syncTopbarHeight();
+    });
   }
 
   // ------------------------------------------------------------------------

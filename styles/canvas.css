@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   background-color: var(--bg-app);
-  transition: bottom var(--transition-normal);
+  transition: top var(--transition-fast), bottom var(--transition-normal);
 }
 
 .workspace-area.drawer-open {
