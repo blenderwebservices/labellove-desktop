@@ -82,7 +82,7 @@ export class DataStore {
 
   getActiveRecord() {
     if (this.records.length === 0) return {};
-    return this.records[this.activeRecordIndex] || this.records[0];
+    return this.records[this.activeRecordIndex] || this.records[0] || {};
   }
 
   setActiveRecord(index) {
@@ -106,12 +106,40 @@ export class DataStore {
 
   addRecord(record) {
     this.records.push(record);
+    if (this.workbook?.sheets?.[this.currentSheetName]) {
+      if (!this.workbook.sheets[this.currentSheetName].records) {
+        this.workbook.sheets[this.currentSheetName].records = [];
+      }
+      this.workbook.sheets[this.currentSheetName].records.push({ ...record });
+    }
     this.notify();
+  }
+
+  deleteRecord(index) {
+    if (index >= 0 && index < this.records.length) {
+      this.records.splice(index, 1);
+      if (this.workbook?.sheets?.[this.currentSheetName]?.records) {
+        this.workbook.sheets[this.currentSheetName].records.splice(index, 1);
+      }
+      if (this.records.length === 0) {
+        this.activeRecordIndex = 0;
+      } else if (this.activeRecordIndex >= this.records.length) {
+        this.activeRecordIndex = this.records.length - 1;
+      } else if (index < this.activeRecordIndex) {
+        this.activeRecordIndex = Math.max(0, this.activeRecordIndex - 1);
+      }
+      this.notify();
+      return true;
+    }
+    return false;
   }
 
   updateCell(rowIndex, colName, value) {
     if (this.records[rowIndex]) {
       this.records[rowIndex][colName] = value;
+      if (this.workbook?.sheets?.[this.currentSheetName]?.records?.[rowIndex]) {
+        this.workbook.sheets[this.currentSheetName].records[rowIndex][colName] = value;
+      }
       this.notify();
     }
   }
@@ -169,8 +197,10 @@ export class DataStore {
    * Check if any records in the table produce text overflow
    */
   getOverflowWarnings(elements) {
+    if (!elements || elements.length === 0 || this.records.length === 0) return [];
     const warnings = [];
     const activeRec = this.getActiveRecord();
+    if (!activeRec || Object.keys(activeRec).length === 0) return [];
 
     elements.filter(el => el.type === 'text' && (el.field || el.text.includes('{{') || el.mask)).forEach(el => {
       const mask = el.mask === 'custom' ? el.customMask : el.mask;

@@ -692,11 +692,11 @@
           <div class="form-grid-2">
             <div class="input-with-label">
               <span class="input-prefix">Ancho mm</span>
-              <input type="number" step="1" min="15" max="500" class="num-input" id="labelWidthMm" value="100">
+              <input type="number" step="1" min="15" max="600" class="num-input" id="labelWidthMm" value="100" title="Ancho de la etiqueta (15 a 600 mm)">
             </div>
             <div class="input-with-label">
               <span class="input-prefix">Alto mm</span>
-              <input type="number" step="1" min="15" max="500" class="num-input" id="labelHeightMm" value="150">
+              <input type="number" step="1" min="15" max="600" class="num-input" id="labelHeightMm" value="150" title="Alto de la etiqueta (15 a 600 mm)">
             </div>
           </div>
 
@@ -783,8 +783,11 @@
           <span>📥</span>
           <span>Importar Excel / CSV</span>
         </button>
-        <button class="btn-secondary" id="addTableRowBtn" style="padding: 3px 8px; font-size: 11px;">
+        <button class="btn-secondary" id="addTableRowBtn" style="padding: 3px 8px; font-size: 11px;" title="Añadir una nueva fila a la tabla">
           <span>+ Añadir Fila</span>
+        </button>
+        <button class="btn-secondary btn-danger-hover" id="deleteTableRowBtn" style="padding: 3px 8px; font-size: 11px;" title="Eliminar el registro activo seleccionado">
+          <span>− Eliminar Fila</span>
         </button>
       </div>
     </div>

@@ -289,9 +289,16 @@ class App {
       this.canvasEngine.fitToScreen();
     });
 
-    // Canvas Dimensions Badge in Topbar (switches to Label tab)
+    // Canvas Dimensions Badge in Topbar (switches to Label tab and focuses width input)
     document.getElementById('canvasDimBadge')?.addEventListener('click', () => {
       document.querySelector('.tab-btn[data-tab="label"]')?.click();
+      setTimeout(() => {
+        const wInput = document.getElementById('labelWidthMm');
+        if (wInput) {
+          wInput.focus();
+          wInput.select();
+        }
+      }, 50);
     });
 
     // Left Ribbon Creation Tools
@@ -421,17 +428,52 @@ class App {
     // Add Row in Data Table
     document.getElementById('addTableRowBtn')?.addEventListener('click', () => {
       const nextId = 10842 + this.dataStore.records.length;
-      this.dataStore.addRecord({
-        orden_id: String(nextId),
-        nombre_cliente: 'Nuevo Cliente',
-        direccion: 'Av. Constitución 100',
-        ciudad: 'Monterrey, N.L.',
-        codigo_postal: '64000',
-        sku: 'ACC-CBL-FAST',
-        precio: '299.00',
-        tracking_code: `MX-${nextId}-TR`,
-        status: 'Listo'
-      });
+      const newRecord = {};
+      if (this.dataStore.columns && this.dataStore.columns.length > 0) {
+        this.dataStore.columns.forEach(col => {
+          if (col === 'orden_id') newRecord[col] = String(nextId);
+          else if (col === 'nombre_cliente') newRecord[col] = 'Nuevo Cliente';
+          else if (col === 'direccion') newRecord[col] = 'Av. Constitución 100';
+          else if (col === 'ciudad') newRecord[col] = 'Monterrey, N.L.';
+          else if (col === 'codigo_postal') newRecord[col] = '64000';
+          else if (col === 'sku') newRecord[col] = 'ACC-CBL-FAST';
+          else if (col === 'precio') newRecord[col] = '299.00';
+          else if (col === 'tracking_code') newRecord[col] = `MX-${nextId}-TR`;
+          else if (col === 'status') newRecord[col] = 'Listo';
+          else newRecord[col] = '';
+        });
+      } else {
+        newRecord.orden_id = String(nextId);
+        newRecord.nombre_cliente = 'Nuevo Cliente';
+        newRecord.direccion = 'Av. Constitución 100';
+        newRecord.ciudad = 'Monterrey, N.L.';
+        newRecord.codigo_postal = '64000';
+        newRecord.sku = 'ACC-CBL-FAST';
+        newRecord.precio = '299.00';
+        newRecord.tracking_code = `MX-${nextId}-TR`;
+        newRecord.status = 'Listo';
+      }
+      this.dataStore.addRecord(newRecord);
+      this.dataStore.setActiveRecord(this.dataStore.records.length - 1);
+      this.renderDataTable();
+      this.docManager?.setUnsavedChanges(true);
+      this.docManager?.showToast('Fila añadida al dataflow', 'success');
+    });
+
+    // Delete Active Row in Data Table
+    document.getElementById('deleteTableRowBtn')?.addEventListener('click', () => {
+      if (this.dataStore.records.length === 0) {
+        this.docManager?.showToast('No hay registros para eliminar', 'warning');
+        return;
+      }
+      const targetIndex = this.dataStore.activeRecordIndex;
+      const recordNumber = targetIndex + 1;
+      if (confirm(`¿Deseas eliminar el registro #${recordNumber}?`)) {
+        this.dataStore.deleteRecord(targetIndex);
+        this.renderDataTable();
+        this.docManager?.setUnsavedChanges(true);
+        this.docManager?.showToast(`Registro #${recordNumber} eliminado`, 'info');
+      }
     });
 
     // Floating HUD controls
@@ -619,20 +661,80 @@ class App {
     });
 
     // ------------------------------------------------------------------------
-    // Label / Canvas Dimensions and Settings
+    // Label / Canvas Dimensions and Settings (Deferred validation on commit)
     // ------------------------------------------------------------------------
-    const onCanvasDimInput = () => {
-      const w = parseFloat(document.getElementById('labelWidthMm')?.value);
-      const h = parseFloat(document.getElementById('labelHeightMm')?.value);
-      if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
+    const commitDimensionChange = (inputEl, dimType) => {
+      const currentW = this.canvasEngine.currentTemplate?.widthMm || 100;
+      const currentH = this.canvasEngine.currentTemplate?.heightMm || 150;
+      const currentVal = dimType === 'width' ? currentW : currentH;
+
+      const rawVal = (inputEl.value ?? '').toString().trim();
+      if (rawVal === '') {
+        inputEl.value = currentVal;
+        return;
+      }
+
+      let num = parseFloat(rawVal);
+      if (isNaN(num) || num <= 0) {
+        inputEl.value = currentVal;
+        return;
+      }
+
+      // Round to 1 decimal place
+      num = Math.round(num * 10) / 10;
+      const MIN_DIM = 15;
+      const MAX_DIM = 600;
+
+      if (num < MIN_DIM) {
+        num = MIN_DIM;
+        inputEl.value = MIN_DIM;
+        this.docManager?.showToast(`El ${dimType === 'width' ? 'ancho' : 'alto'} mínimo permitido es ${MIN_DIM} mm`, 'warning');
+      } else if (num > MAX_DIM) {
+        num = MAX_DIM;
+        inputEl.value = MAX_DIM;
+        this.docManager?.showToast(`El ${dimType === 'width' ? 'ancho' : 'alto'} máximo permitido es ${MAX_DIM} mm`, 'warning');
+      } else {
+        inputEl.value = num;
+      }
+
+      const w = dimType === 'width' ? num : (parseFloat(document.getElementById('labelWidthMm')?.value) || currentW);
+      const h = dimType === 'height' ? num : (parseFloat(document.getElementById('labelHeightMm')?.value) || currentH);
+
+      if (w !== currentW || h !== currentH) {
         this.canvasEngine.setCanvasSize(w, h);
         this.updateCanvasDimBadge();
         this.syncPresetSelect(w, h);
         this.docManager?.setUnsavedChanges(true);
       }
     };
-    document.getElementById('labelWidthMm')?.addEventListener('input', onCanvasDimInput);
-    document.getElementById('labelHeightMm')?.addEventListener('input', onCanvasDimInput);
+
+    const setupDimInput = (id, dimType) => {
+      const input = document.getElementById(id);
+      if (!input) return;
+
+      // Validate when user commits change (change / blur)
+      input.addEventListener('change', () => commitDimensionChange(input, dimType));
+      input.addEventListener('blur', () => commitDimensionChange(input, dimType));
+
+      // Handle keyboard shortcuts (Enter to commit, Escape to cancel)
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitDimensionChange(input, dimType);
+          input.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          const currentVal = dimType === 'width'
+            ? this.canvasEngine.currentTemplate?.widthMm
+            : this.canvasEngine.currentTemplate?.heightMm;
+          input.value = currentVal || 100;
+          input.blur();
+        }
+      });
+    };
+
+    setupDimInput('labelWidthMm', 'width');
+    setupDimInput('labelHeightMm', 'height');
 
     // Label Preset Dropdown
     document.getElementById('labelPresetSelect')?.addEventListener('change', (e) => {
@@ -850,8 +952,8 @@ class App {
     const wInput = document.getElementById('labelWidthMm');
     const hInput = document.getElementById('labelHeightMm');
     const dpiSelect = document.getElementById('labelDpi');
-    if (wInput) wInput.value = t.widthMm;
-    if (hInput) hInput.value = t.heightMm;
+    if (wInput && document.activeElement !== wInput) wInput.value = t.widthMm;
+    if (hInput && document.activeElement !== hInput) hInput.value = t.heightMm;
     if (dpiSelect) dpiSelect.value = t.dpi || 203;
 
     this.updateCanvasDimBadge();
@@ -928,22 +1030,34 @@ class App {
     if (!table) return;
 
     // Header
-    let html = '<thead><tr><th>#</th>';
+    let html = '<thead><tr><th style="width: 38px; text-align: center;">#</th>';
     this.dataStore.columns.forEach(col => {
       html += `<th>{{ ${col} }}</th>`;
     });
+    html += '<th style="width: 44px; text-align: center;" title="Acciones">Acción</th>';
     html += '</tr></thead><tbody>';
 
     // Rows
-    this.dataStore.records.forEach((row, idx) => {
-      const isActive = idx === this.dataStore.activeRecordIndex;
-      html += `<tr class="${isActive ? 'active-record' : ''}" data-index="${idx}">`;
-      html += `<td style="font-family: var(--font-mono); font-weight: bold; width: 36px;">${idx + 1}</td>`;
-      this.dataStore.columns.forEach(col => {
-        html += `<td contenteditable="true" data-col="${col}">${row[col] || ''}</td>`;
+    if (this.dataStore.records.length === 0) {
+      const colSpan = (this.dataStore.columns.length || 1) + 2;
+      html += `<tr><td colspan="${colSpan}" style="text-align: center; padding: 24px 12px; color: var(--text-faint); font-style: italic;">
+        No hay registros en la tabla. Haz clic en <strong>+ Añadir Fila</strong> o importa un archivo Excel/CSV.
+      </td></tr>`;
+    } else {
+      this.dataStore.records.forEach((row, idx) => {
+        const isActive = idx === this.dataStore.activeRecordIndex;
+        html += `<tr class="${isActive ? 'active-record' : ''}" data-index="${idx}">`;
+        html += `<td style="font-family: var(--font-mono); font-weight: bold; width: 38px; text-align: center;">${idx + 1}</td>`;
+        this.dataStore.columns.forEach(col => {
+          const val = row[col] !== undefined && row[col] !== null ? String(row[col]) : '';
+          html += `<td contenteditable="true" data-col="${col}">${this.escapeHtml(val)}</td>`;
+        });
+        html += `<td style="text-align: center; width: 44px; padding: 2px 4px;">
+          <button type="button" class="btn-delete-row" data-index="${idx}" title="Eliminar fila #${idx + 1}">🗑️</button>
+        </td>`;
+        html += '</tr>';
       });
-      html += '</tr>';
-    });
+    }
 
     html += '</tbody>';
     table.innerHTML = html;
@@ -951,9 +1065,26 @@ class App {
     // Table click listener
     table.querySelectorAll('tbody tr').forEach(tr => {
       tr.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'TD') return;
+        const delBtn = e.target.closest('.btn-delete-row');
+        if (delBtn) {
+          e.stopPropagation();
+          const idx = parseInt(delBtn.dataset.index, 10);
+          if (!isNaN(idx)) {
+            if (confirm(`¿Deseas eliminar el registro #${idx + 1}?`)) {
+              this.dataStore.deleteRecord(idx);
+              this.renderDataTable();
+              this.docManager?.setUnsavedChanges(true);
+              this.docManager?.showToast(`Registro #${idx + 1} eliminado`, 'info');
+            }
+          }
+          return;
+        }
+
+        if (e.target.tagName !== 'TD' && !e.target.isContentEditable) return;
         const idx = parseInt(tr.dataset.index, 10);
-        this.dataStore.setActiveRecord(idx);
+        if (!isNaN(idx)) {
+          this.dataStore.setActiveRecord(idx);
+        }
       });
     });
 
@@ -968,13 +1099,32 @@ class App {
     });
 
     const countBadge = document.getElementById('recordCountBadge');
-    if (countBadge) countBadge.textContent = `${this.dataStore.records.length} registros`;
+    if (countBadge) {
+      const len = this.dataStore.records.length;
+      countBadge.textContent = `${len} ${len === 1 ? 'registro' : 'registros'}`;
+    }
+
+    this.updateRecordScrubber();
   }
 
   updateRecordScrubber() {
     const label = document.getElementById('scrubberStatusText');
-    if (label) {
-      label.textContent = `Registro ${this.dataStore.activeRecordIndex + 1} de ${this.dataStore.records.length}`;
+    const prevBtn = document.getElementById('scrubberPrevBtn');
+    const nextBtn = document.getElementById('scrubberNextBtn');
+    const deleteBtn = document.getElementById('deleteTableRowBtn');
+
+    const total = this.dataStore.records.length;
+    if (total === 0) {
+      if (label) label.textContent = 'Sin registros';
+      if (prevBtn) prevBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = true;
+      if (deleteBtn) deleteBtn.disabled = true;
+    } else {
+      const current = this.dataStore.activeRecordIndex + 1;
+      if (label) label.textContent = `Registro ${current} de ${total}`;
+      if (prevBtn) prevBtn.disabled = (this.dataStore.activeRecordIndex <= 0);
+      if (nextBtn) nextBtn.disabled = (this.dataStore.activeRecordIndex >= total - 1);
+      if (deleteBtn) deleteBtn.disabled = false;
     }
   }
 
@@ -1748,6 +1898,7 @@ class App {
     drawerSheetSelect?.addEventListener('change', (e) => {
       const sheetName = e.target.value;
       if (this.dataStore.loadSheet(sheetName)) {
+        this.renderDataTable();
         const selectedEl = this.canvasEngine.elements.find(el => el.id === this.canvasEngine.selectedElementId);
         if (selectedEl) this.updateInspectorValues(selectedEl);
         this.docManager.setUnsavedChanges(true);
@@ -1958,6 +2109,7 @@ class App {
 
     // Load into DataStore
     this.dataStore.loadWorkbook(this.currentExcelWorkbook, this.activeImportSheetName);
+    this.renderDataTable();
 
     // Update Drawer File Name Display
     const drawerTitle = document.getElementById('dataDrawerFileName');
