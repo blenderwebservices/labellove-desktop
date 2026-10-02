@@ -68,7 +68,25 @@ export class DocumentManager {
   }
 
   /**
-   * Validates document schema before loading
+   * Cleans an object recursively to prevent Prototype Pollution
+   */
+  stripPollution(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.stripPollution(item));
+    }
+    const clean = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        continue;
+      }
+      clean[key] = (typeof value === 'object' && value !== null) ? this.stripPollution(value) : value;
+    }
+    return clean;
+  }
+
+  /**
+   * Validates document schema and numerical bounds before loading
    */
   validateDocument(doc) {
     if (!doc || typeof doc !== 'object') {
@@ -80,12 +98,48 @@ export class DocumentManager {
       throw new Error(`Formato no soportado: "${doc.format}". Se esperaba "labellove".`);
     }
 
-    if (!doc.label && !doc.widthMm) {
-      throw new Error('El documento no contiene especificaciones de etiqueta (dimensiones o tipo).');
+    const width = doc.label?.widthMm !== undefined ? doc.label.widthMm : doc.widthMm;
+    const height = doc.label?.heightMm !== undefined ? doc.label.heightMm : doc.heightMm;
+
+    if (width === undefined || height === undefined || typeof width !== 'number' || typeof height !== 'number' || !isFinite(width) || !isFinite(height)) {
+      throw new Error('El documento no contiene dimensiones numéricas válidas (ancho y alto).');
     }
 
-    if (!Array.isArray(doc.elements) && !Array.isArray(doc.label?.elements)) {
+    if (width < 10 || width > 1000 || height < 10 || height > 1000) {
+      throw new Error('Las dimensiones de la etiqueta están fuera de los límites permitidos (10 mm - 1000 mm).');
+    }
+
+    const rawElements = doc.elements || doc.label?.elements;
+    if (!Array.isArray(rawElements)) {
       throw new Error('El documento no contiene una lista de elementos válida.');
+    }
+
+    if (rawElements.length > 500) {
+      throw new Error('El documento excede el límite máximo de 500 elementos de diseño.');
+    }
+
+    // Sanitize and validate each element
+    const allowedTypes = ['text', 'barcode', 'qr', 'shape', 'image'];
+    for (let i = 0; i < rawElements.length; i++) {
+      const el = rawElements[i];
+      if (!el || typeof el !== 'object') {
+        throw new Error(`Elemento #${i + 1} no es un objeto válido.`);
+      }
+      if (!allowedTypes.includes(el.type)) {
+        throw new Error(`Tipo de elemento no reconocido: "${el.type}" en elemento #${i + 1}.`);
+      }
+      // Numeric sanity check
+      ['xMm', 'yMm', 'widthMm', 'heightMm'].forEach(coord => {
+        if (el[coord] !== undefined && (!isFinite(el[coord]) || el[coord] < -500 || el[coord] > 2000)) {
+          el[coord] = 0;
+        }
+      });
+      // String length limits to prevent DoS
+      ['text', 'value', 'imageName', 'src', 'id'].forEach(strProp => {
+        if (typeof el[strProp] === 'string' && el[strProp].length > 100000) {
+          el[strProp] = el[strProp].slice(0, 100000);
+        }
+      });
     }
 
     return true;
@@ -94,7 +148,8 @@ export class DocumentManager {
   /**
    * Loads a serialized document into the application
    */
-  loadDocument(doc, fileName = null) {
+  loadDocument(rawDoc, fileName = null) {
+    const doc = this.stripPollution(rawDoc);
     this.validateDocument(doc);
 
     const canvas = this.app.canvasEngine;
@@ -554,7 +609,11 @@ export class DocumentManager {
       error: '❌'
     };
 
-    toast.innerHTML = `<span class="toast-icon">${icons[type] || '⚡'}</span><span class="toast-msg">${message}</span>`;
+    toast.innerHTML = `<span class="toast-icon">${icons[type] || '⚡'}</span><span class="toast-msg"></span>`;
+    const msgEl = toast.querySelector('.toast-msg');
+    if (msgEl) {
+      msgEl.textContent = message;
+    }
     toast.className = `app-toast toast-${type} is-visible`;
 
     clearTimeout(this.toastTimer);

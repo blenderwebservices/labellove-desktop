@@ -7,6 +7,7 @@
  */
 
 import { BarcodeEngine } from './barcode-engine.js';
+import { CanvasEngine } from './canvas.js';
 
 export const PAPER_SIZES = {
   letter: {
@@ -834,7 +835,7 @@ export class SheetPrintEngine {
         if (rawSrc && rawSrc.includes('{{')) {
           rawSrc = this.dataStore.interpolate(rawSrc, record);
         }
-        if (rawSrc) {
+        if (rawSrc && CanvasEngine.isSafeImageSrc(rawSrc)) {
           const img = document.createElement('img');
           img.src = rawSrc;
           img.alt = el.imageName || 'Imagen';

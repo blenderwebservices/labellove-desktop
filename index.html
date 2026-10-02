@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LabelLove - Diseñador e Impresor de Etiquetas de Próxima Generación</title>
   
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' blob: data:; object-src 'none'; base-uri 'self';">
+  
   <!-- Modern Typography: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,33 +17,14 @@
   <link rel="stylesheet" href="styles/canvas.css">
   <link rel="stylesheet" href="styles/components.css">
 
-  <!-- Universal Barcode & 2D QR Engine via bwip-js (39+ symbologies: QR, Micro QR, GS1 QR, HIBC QR, Data Matrix, PDF417, EAN, UPC, etc.) -->
+  <!-- Core Libraries (Vendored locally for offline reliability, zero-latency & strict CSP) -->
   <script src="js/vendor/bwip-js-min.js"></script>
-  <script>
-    if (typeof bwipjs === 'undefined') {
-      document.write('<script src="https://cdn.jsdelivr.net/npm/bwip-js@3.4.4/dist/bwip-js-min.js"><\/script>');
-    }
-  </script>
-  <!-- Barcode & QR Generation Fallback Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <!-- Excel (.xlsx, .xls) and CSV parsing engine via SheetJS -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="js/vendor/jsbarcode.min.js"></script>
+  <script src="js/vendor/qrcode.min.js"></script>
+  <script src="js/vendor/xlsx.full.min.js"></script>
 
-  <!-- Instant Theme Initializer (prevents flash of wrong theme) -->
-  <script>
-    (function() {
-      try {
-        var pref = localStorage.getItem('labellove_theme_preference') || 'system';
-        var theme = pref;
-        if (pref === 'system') {
-          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-        }
-        document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.setAttribute('data-theme-preference', pref);
-      } catch(e) {}
-    })();
-  </script>
+  <!-- Instant Theme Initializer (Anti-FOUC) -->
+  <script src="js/theme-init.js"></script>
 </head>
 <body>
 

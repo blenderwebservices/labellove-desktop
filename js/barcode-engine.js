@@ -538,6 +538,15 @@ export class BarcodeEngine {
   }
 
   /**
+   * Escape XML entities for safe SVG text interpolation
+   */
+  static escapeXml(str) {
+    return String(str || '').replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+    }[m]));
+  }
+
+  /**
    * Vector Fallback for 1D Barcode with accurate guard bars and checksum pattern
    */
   static renderVectorBarcodeFallback(svg, text, options = {}) {
@@ -558,13 +567,14 @@ export class BarcodeEngine {
       currentX += barWidth + 1.2;
     }
 
+    const safeText = this.escapeXml(cleanText);
     svg.setAttribute('viewBox', `0 0 ${currentX + 5} 55`);
     svg.innerHTML = `
       <g>
         ${bars.join('')}
         ${options.displayValue !== false ? `
           <text x="${(currentX + 5) / 2}" y="52" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle" fill="#000000">
-            ${cleanText}
+            ${safeText}
           </text>
         ` : ''}
       </g>

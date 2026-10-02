@@ -1010,7 +1010,7 @@ class App {
       row.innerHTML = `
         <div style="display:flex; align-items:center; gap:6px;">
           <span>${el.type === 'text' ? 'T' : el.type === 'barcode' ? '|||' : el.type === 'qr' ? '▦' : el.type === 'image' ? '🖼️' : '▢'}</span>
-          <span style="font-weight: 500;">${el.imageName || el.text || el.value || el.id}</span>
+          <span style="font-weight: 500;">${this.escapeHtml(el.imageName || el.text || el.value || el.id)}</span>
         </div>
         <span style="color: var(--text-faint); font-size: 10px;">${el.type}</span>
       `;
@@ -1032,7 +1032,7 @@ class App {
     // Header
     let html = '<thead><tr><th style="width: 38px; text-align: center;">#</th>';
     this.dataStore.columns.forEach(col => {
-      html += `<th>{{ ${col} }}</th>`;
+      html += `<th>{{ ${this.escapeHtml(col)} }}</th>`;
     });
     html += '<th style="width: 44px; text-align: center;" title="Acciones">Acción</th>';
     html += '</tr></thead><tbody>';
@@ -1050,7 +1050,7 @@ class App {
         html += `<td style="font-family: var(--font-mono); font-weight: bold; width: 38px; text-align: center;">${idx + 1}</td>`;
         this.dataStore.columns.forEach(col => {
           const val = row[col] !== undefined && row[col] !== null ? String(row[col]) : '';
-          html += `<td contenteditable="true" data-col="${col}">${this.escapeHtml(val)}</td>`;
+          html += `<td contenteditable="true" data-col="${this.escapeHtml(col)}">${this.escapeHtml(val)}</td>`;
         });
         html += `<td style="text-align: center; width: 44px; padding: 2px 4px;">
           <button type="button" class="btn-delete-row" data-index="${idx}" title="Eliminar fila #${idx + 1}">🗑️</button>
@@ -1368,8 +1368,9 @@ class App {
         clear: 'Transparente'
       }[lbl.substrate] || lbl.substrate || 'Térmico';
 
+      const safeId = this.escapeHtml(meta.id || '');
       return `
-        <div class="recent-project-card" data-id="${meta.id}">
+        <div class="recent-project-card" data-id="${safeId}">
           <div class="recent-card-header">
             <div>
               <div class="recent-card-title">${this.escapeHtml(meta.name || 'Etiqueta sin título')}</div>
@@ -1383,8 +1384,8 @@ class App {
           <div class="recent-card-footer">
             <span class="recent-card-date">${dateStr}</span>
             <div class="recent-card-actions">
-              <button class="btn-card-del" data-id="${meta.id}" title="Eliminar de proyectos recientes">🗑️</button>
-              <button class="btn-card-open" data-id="${meta.id}">Abrir</button>
+              <button class="btn-card-del" data-id="${safeId}" title="Eliminar de proyectos recientes">🗑️</button>
+              <button class="btn-card-open" data-id="${safeId}">Abrir</button>
             </div>
           </div>
         </div>
@@ -2151,7 +2152,10 @@ class App {
       .toLowerCase()
       .replace(/[\s\W-]+/g, '_')
       .replace(/^_+|_+$/g, '');
-    return clean || `col_${index + 1}`;
+    if (!clean || clean === 'proto' || clean === '__proto__' || clean === 'constructor' || clean === 'prototype') {
+      return `col_${index + 1}`;
+    }
+    return clean;
   }
 
   escapeHtml(str) {

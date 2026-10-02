@@ -267,11 +267,13 @@ export class CanvasEngine {
           rawSrc = this.dataStore.interpolate(rawSrc, activeRecord);
         }
 
-        if (!rawSrc) {
+        const isSafe = CanvasEngine.isSafeImageSrc(rawSrc);
+
+        if (!rawSrc || !isSafe) {
           elNode.innerHTML = `
             <div class="image-empty-placeholder" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1.5px dashed var(--border-subtle); border-radius: 4px; background: rgba(0, 0, 0, 0.03); color: var(--text-faint); font-size: ${Math.max(9, 11 * this.zoom)}px; text-align: center; padding: 4px; box-sizing: border-box; pointer-events: none;">
-              <span style="font-size: ${Math.max(14, 18 * this.zoom)}px;">🖼️</span>
-              <span>Sin imagen</span>
+              <span style="font-size: ${Math.max(14, 18 * this.zoom)}px;">${!rawSrc ? '🖼️' : '🔒'}</span>
+              <span>${!rawSrc ? 'Sin imagen' : 'Origen no permitido'}</span>
             </div>
           `;
         } else {
@@ -839,5 +841,21 @@ export class CanvasEngine {
     });
 
     window.addEventListener('resize', () => this.renderRulers());
+  }
+
+  /**
+   * Validates image sources to prevent script execution, file leakage, and data exfiltration
+   */
+  static isSafeImageSrc(src) {
+    if (!src || typeof src !== 'string') return false;
+    const s = src.trim();
+    // Prohibit dangerous pseudo-protocols
+    if (/^(javascript|vbscript|data:text\/html):/i.test(s)) return false;
+    // Allow data URIs for images, blob URLs, and relative local paths
+    if (s.startsWith('data:image/') || s.startsWith('blob:') || s.startsWith('./') || s.startsWith('/') || !s.includes('://')) {
+      return true;
+    }
+    // Block remote HTTP/HTTPS image loading to prevent side-channel data exfiltration
+    return false;
   }
 }
