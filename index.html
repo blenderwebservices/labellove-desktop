@@ -76,9 +76,9 @@
           <span>Guardar</span>
         </button>
 
-        <button class="topbar-action-btn" id="btnSaveAsDoc" title="Guardar como archivo .labellove en tu equipo">
-          <span>⬇️</span>
-          <span>Exportar</span>
+        <button class="topbar-action-btn" id="btnSaveAsDoc" title="Guardar como... (Guardar copia con otro nombre) (Cmd+Shift+S)">
+          <span>📑</span>
+          <span>Guardar como...</span>
         </button>
       </div>
 
@@ -1142,6 +1142,50 @@
             <span>Guardar y continuar</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       7b. Save As Modal (Guardar como con otro nombre)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="saveAsModal">
+    <div class="modal-window modal-sm save-as-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-title-icon">💾</span>
+          <span>Guardar como...</span>
+        </div>
+        <button class="modal-close-btn" id="closeSaveAsModalBtn" title="Cerrar (Esc)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="save-as-form">
+          <div class="save-as-field-group">
+            <label for="saveAsNameInput">Nombre de la nueva etiqueta o proyecto:</label>
+            <input type="text" id="saveAsNameInput" class="save-as-input" placeholder="Ej. Etiqueta Almacén Lote B" autocomplete="off" spellcheck="false">
+            <div class="save-as-preview-hint">
+              <span>Se guardará como:</span>
+              <code id="saveAsPreviewCode">etiqueta.labellove</code>
+            </div>
+          </div>
+
+          <div class="save-as-tip-card">
+            <div class="save-as-tip-header">
+              <span>💡</span>
+              <strong>Guardar como nueva copia</strong>
+            </div>
+            <p>Se creará un proyecto independiente con este nuevo nombre. El trabajo original se conservará intacto y tus siguientes cambios se aplicarán sobre la nueva copia.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer save-as-footer">
+        <button class="btn-secondary" id="btnCancelSaveAsModal">Cancelar</button>
+        <button class="btn-primary" id="btnConfirmSaveAs">
+          <span>💾</span>
+          <span>Guardar con este nombre</span>
+        </button>
       </div>
     </div>
   </div>

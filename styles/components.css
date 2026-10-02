@@ -1308,6 +1308,105 @@
   color: #ef4444;
 }
 
+/* Save As Modal */
+.save-as-modal {
+  max-width: 480px;
+  width: 95%;
+}
+
+.save-as-modal .modal-header {
+  padding: 14px 18px;
+}
+
+.save-as-form {
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.save-as-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.save-as-field-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.save-as-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-main);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.save-as-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.save-as-preview-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.save-as-preview-hint code {
+  color: var(--accent-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.save-as-tip-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.save-as-tip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.save-as-tip-header strong {
+  color: var(--text-main);
+  font-size: 12px;
+}
+
+.save-as-tip-card p {
+  margin: 0;
+}
+
+.save-as-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+}
+
 /* New Job Modal Header & Tabs */
 .new-job-modal .modal-header {
   padding: 14px 20px;

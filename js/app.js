@@ -189,13 +189,13 @@ class App {
       this.docManager.openFromFile();
     });
 
-    // Save & Export
+    // Save & Export / Save As
     document.getElementById('btnSaveDoc')?.addEventListener('click', () => {
       this.docManager.saveToFile(false);
     });
 
     document.getElementById('btnSaveAsDoc')?.addEventListener('click', () => {
-      this.docManager.saveToFile(true);
+      this.openSaveAsModal();
     });
 
     // Native file input change
@@ -218,6 +218,9 @@ class App {
 
     // Setup New Job & Unsaved Changes Modal Events
     this.setupNewJobModalEvents();
+
+    // Setup Save As Modal Events
+    this.setupSaveAsModalEvents();
 
     // Setup Excel / CSV Multi-Sheet Import Events
     this.setupExcelImportEvents();
@@ -1179,10 +1182,14 @@ class App {
         return;
       }
 
-      // Cmd+S / Ctrl+S (Guardar)
+      // Cmd+S / Ctrl+S (Guardar) & Cmd+Shift+S / Ctrl+Shift+S (Guardar como...)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        this.docManager.saveToFile(false);
+        if (e.shiftKey) {
+          this.openSaveAsModal();
+        } else {
+          this.docManager.saveToFile(false);
+        }
         return;
       }
 
@@ -1235,6 +1242,7 @@ class App {
         document.getElementById('unsavedChangesModal')?.classList.remove('is-open');
         document.getElementById('newJobModal')?.classList.remove('is-open');
         document.getElementById('excelImportModal')?.classList.remove('is-open');
+        document.getElementById('saveAsModal')?.classList.remove('is-open');
       }
 
       // Arrow keys nudging
@@ -1841,6 +1849,96 @@ class App {
       currentSearchQuery = e.target.value;
       this.renderTemplatesCatalog(currentCategory, currentSearchQuery);
     });
+  }
+
+  // ------------------------------------------------------------------------
+  // Save As Modal Logic (Guardar como con otro nombre)
+  // ------------------------------------------------------------------------
+  setupSaveAsModalEvents() {
+    const modal = document.getElementById('saveAsModal');
+    const input = document.getElementById('saveAsNameInput');
+    const preview = document.getElementById('saveAsPreviewCode');
+
+    // Close buttons
+    document.getElementById('closeSaveAsModalBtn')?.addEventListener('click', () => {
+      this.closeSaveAsModal();
+    });
+    document.getElementById('btnCancelSaveAsModal')?.addEventListener('click', () => {
+      this.closeSaveAsModal();
+    });
+
+    // Backdrop click
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        this.closeSaveAsModal();
+      }
+    });
+
+    // Live preview update
+    input?.addEventListener('input', () => {
+      const val = input.value.trim() || 'etiqueta';
+      if (preview) {
+        preview.textContent = `${this.docManager.slugify(val)}.labellove`;
+      }
+    });
+
+    // Keyboard Enter / Escape on input
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.handleSaveAsSubmit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this.closeSaveAsModal();
+      }
+    });
+
+    // Confirm button
+    document.getElementById('btnConfirmSaveAs')?.addEventListener('click', () => {
+      this.handleSaveAsSubmit();
+    });
+  }
+
+  openSaveAsModal() {
+    const modal = document.getElementById('saveAsModal');
+    const input = document.getElementById('saveAsNameInput');
+    const preview = document.getElementById('saveAsPreviewCode');
+    if (!modal || !input) return;
+
+    // Close any other open dropdowns
+    document.getElementById('openMenuDropdown')?.classList.remove('is-open');
+
+    const projNameInput = document.querySelector('.project-name-input');
+    const currentName = (projNameInput ? projNameInput.value.trim() : '') || 'Etiqueta';
+    const suggested = currentName.includes('(Copia') ? currentName : `${currentName} (Copia)`;
+
+    input.value = suggested;
+    if (preview) {
+      preview.textContent = `${this.docManager.slugify(suggested)}.labellove`;
+    }
+
+    modal.classList.add('is-open');
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 60);
+  }
+
+  closeSaveAsModal() {
+    document.getElementById('saveAsModal')?.classList.remove('is-open');
+  }
+
+  async handleSaveAsSubmit() {
+    const input = document.getElementById('saveAsNameInput');
+    const newName = input ? input.value.trim() : '';
+    if (!newName) {
+      this.docManager.showToast('Por favor escribe un nombre para la copia.', 'warning');
+      input?.focus();
+      return;
+    }
+
+    this.closeSaveAsModal();
+    await this.docManager.saveAs(newName);
   }
 
   // ------------------------------------------------------------------------

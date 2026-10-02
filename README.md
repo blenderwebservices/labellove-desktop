@@ -265,6 +265,7 @@ Haz clic en **"Go Live"** desde la barra de estado en el archivo `index.html`.
 |---|---|
 | `Cmd + P` / `Ctrl + P` | Abrir diálogo de impresión matricial en hoja |
 | `Cmd + S` / `Ctrl + S` | Guardar proyecto actual (`.labellove`) |
+| `Cmd + Shift + S` / `Ctrl + Shift + S` | Guardar como... (Guardar copia con otro nombre) |
 | `Cmd + O` / `Ctrl + O` | Abrir archivo de proyecto desde disco |
 | `Cmd + Z` / `Ctrl + Z` | Deshacer última modificación |
 | `Cmd + Shift + Z` / `Ctrl + Y` | Rehacer modificación |

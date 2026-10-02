@@ -248,14 +248,35 @@ export class DocumentManager {
 
   /**
    * Prompts the user to save to file (.labellove)
+   * @param {boolean} isSaveAs - Whether this is a "Save As" operation
+   * @param {string|null} customName - Optional custom document name
+   * @returns {Promise<boolean>}
    */
-  async saveToFile(isSaveAs = false) {
-    const doc = this.serializeDocument();
+  async saveToFile(isSaveAs = false, customName = null) {
+    const prevId = this.currentDocumentId;
+    const prevCreatedAt = this.currentCreatedAt;
+    const prevFileHandle = this.fileHandle;
+    const prevFileName = this.currentFileName;
+    const nameInput = typeof document !== 'undefined' ? document.querySelector('.project-name-input') : null;
+    const prevInputName = nameInput ? nameInput.value : '';
+
+    if (isSaveAs) {
+      // Disconnect prior file handle so we never overwrite the original file on disk
+      this.fileHandle = null;
+      // Generate new document identity for the independent copy
+      this.currentDocumentId = 'lbl_' + Math.random().toString(36).substring(2, 10);
+      this.currentCreatedAt = new Date().toISOString();
+      if (customName && nameInput) {
+        nameInput.value = customName.trim();
+      }
+    }
+
+    const doc = this.serializeDocument(customName);
     const jsonStr = JSON.stringify(doc, null, 2);
     const suggestedName = `${this.slugify(doc.metadata.name)}.labellove`;
 
     // Try modern File System Access API if supported and not in an iframe
-    if ('showSaveFilePicker' in window && !window.frameElement) {
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window && !window.frameElement) {
       try {
         if (!this.fileHandle || isSaveAs) {
           this.fileHandle = await window.showSaveFilePicker({
@@ -276,10 +297,21 @@ export class DocumentManager {
         this.currentFileName = this.fileHandle.name;
         this.setUnsavedChanges(false);
         this.saveToRecentProjects(doc);
-        this.showToast(`Archivo guardado: ${this.currentFileName}`, 'success');
+        const msg = isSaveAs ? `Guardado como: ${this.currentFileName}` : `Archivo guardado: ${this.currentFileName}`;
+        this.showToast(msg, 'success');
         return true;
       } catch (err) {
         if (err.name === 'AbortError') {
+          if (isSaveAs) {
+            // Rollback to prior identity if user cancelled OS dialog
+            this.currentDocumentId = prevId;
+            this.currentCreatedAt = prevCreatedAt;
+            this.fileHandle = prevFileHandle;
+            this.currentFileName = prevFileName;
+            if (nameInput) {
+              nameInput.value = prevInputName;
+            }
+          }
           return false; // User cancelled picker
         }
         console.warn('File System Access API falló, usando descarga estándar:', err);
@@ -299,8 +331,23 @@ export class DocumentManager {
     this.currentFileName = suggestedName;
     this.setUnsavedChanges(false);
     this.saveToRecentProjects(doc);
-    this.showToast(`Descargado: ${suggestedName}`, 'success');
+    const msg = isSaveAs ? `Guardado como: ${suggestedName}` : `Descargado: ${suggestedName}`;
+    this.showToast(msg, 'success');
     return true;
+  }
+
+  /**
+   * Saves current state as a new document with the specified name
+   * @param {string} newName - New document name
+   * @returns {Promise<boolean>}
+   */
+  async saveAs(newName) {
+    const trimmed = (newName || '').trim();
+    if (!trimmed) {
+      this.showToast('Debes ingresar un nombre válido para guardar la copia.', 'warning');
+      return false;
+    }
+    return this.saveToFile(true, trimmed);
   }
 
   /**
@@ -314,7 +361,7 @@ export class DocumentManager {
     }
 
     // Try modern File System Access API
-    if ('showOpenFilePicker' in window && !window.frameElement) {
+    if (typeof window !== 'undefined' && 'showOpenFilePicker' in window && !window.frameElement) {
       try {
         const [handle] = await window.showOpenFilePicker({
           types: [
