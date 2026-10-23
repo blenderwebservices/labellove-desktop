@@ -259,6 +259,98 @@ Haz clic en **"Go Live"** desde la barra de estado en el archivo `index.html`.
 
 ---
 
+## 🌐 Despliegue en Producción (Plesk Hosting)
+
+Al ser una aplicación web estática con arquitectura **Zero-Build (ES Modules nativos)**, **LabelLove no requiere compilación previa** (`npm run build`), dependencias de Node.js en el servidor (`npm install`), ni un backend PHP/Node activo para ejecutarse. Puede alojarse en cualquier servidor administrado con **Plesk** de manera inmediata.
+
+> [!IMPORTANT]
+> **No ejecutes `npm run build` ni `npm install`:**  
+> El repositorio no contiene `package.json` porque no requiere ningún bundler ni empaquetado. Intentar compilar generará el error `ENOENT: no such file or directory, open 'package.json'`. El servidor web solo debe servir directamente los archivos del proyecto.
+
+---
+
+### Método 1: Despliegue Automatizado con Git en Plesk (Recomendado)
+
+Este método permite actualizar la aplicación automáticamente en producción cada vez que hagas `git push` a la rama principal:
+
+1. **Crear o seleccionar el Dominio/Subdominio:**
+   - En el panel de Plesk, dirígete a **Sitios web y dominios** (*Websites & Domains*).
+   - Añade o selecciona el dominio (ej. `etiquetas.tudominio.com`).
+   - Verifica que el **Directorio raíz del documento** (*Document root*) apunte a `/httpdocs` (o al subdirectorio deseado).
+
+2. **Configurar el repositorio Git:**
+   - En el panel del dominio, haz clic en el icono **Git**.
+   - Haz clic en **Añadir repositorio** (*Add Repository*).
+   - Ingresa la URL remota del repositorio (ej. GitHub, GitLab o Bitbucket mediante HTTPS o SSH).
+   - Selecciona la rama de producción (generalmente `main`).
+
+3. **Configurar la ruta de despliegue y acciones:**
+   - **Ruta de destino:** `/httpdocs` (o la raíz pública del dominio).
+   - **Modo de despliegue:** Selecciona **Despliegue automático** (*Automatic deployment*) para actualizar el sitio con cada push o **Manual**.
+   - **Acciones adicionales de despliegue:** **Dejar este campo completamente vacío.**  
+     *(No agregues comandos como `npm install`, `npm run build` o `composer install`).*
+
+4. **Desplegar:**
+   - Haz clic en **Aceptar** y luego en **Desplegar ahora** (*Deploy now*).
+
+---
+
+### Método 2: Despliegue Manual con el Administrador de Archivos de Plesk
+
+Si prefieres no conectar Git o deseas un despliegue directo:
+
+1. En el panel de Plesk, ve a **Archivos** (*Files*) del dominio correspondiente.
+2. Ingresa a la carpeta pública raíz (`httpdocs/`).
+3. Sube los archivos y carpetas del proyecto:
+   - `index.html` (debe quedar en la raíz de `httpdocs/`)
+   - Carpeta `js/` (con todos sus scripts y `vendor/`)
+   - Carpeta `styles/` (con `theme.css`, `canvas.css`, `components.css`)
+   - Carpeta `examples/` (opcional, para plantillas y pruebas)
+4. *Tip:* Puedes generar un archivo `.zip` en local con estos elementos, subirlo a `httpdocs/` y usar la herramienta **Extraer archivos** integrada en Plesk.
+
+---
+
+### Método 3: Despliegue por FTP / SFTP
+
+1. En Plesk, ve a **Acceso FTP** y crea o consulta una cuenta FTP/SFTP asociada al dominio.
+2. Abre un cliente FTP (FileZilla, Cyberduck o VSCode SFTP).
+3. Conéctate y transfiere los archivos a la carpeta remota `/httpdocs/` manteniendo la estructura de directorios.
+
+---
+
+### ⚙️ Configuraciones Recomendadas del Servidor en Plesk
+
+Para garantizar el máximo rendimiento, seguridad y compatibilidad de LabelLove:
+
+#### 1. Certificado SSL y Redirección HTTPS Obligatoria (Let's Encrypt)
+LabelLove utiliza APIs modernas del navegador (como la Clipboard API para copiar código ZPL o la File System Access API para guardar proyectos). Estas APIs exigen un **Contexto Seguro (HTTPS)**:
+- En Plesk, ve a **Certificados SSL/TLS**.
+- Haz clic en **Instalar certificado Let's Encrypt gratuito** (incluye comodín o subdominio según tu caso).
+- Activa la casilla **Redireccionamiento permanente 301 de HTTP a HTTPS**.
+
+#### 2. Configuración de Apache y Nginx
+En **Configuración de Apache y Nginx** (*Apache & Nginx Settings*) del dominio:
+- **Directivas adicionales de Nginx / Servir archivos estáticos:**  
+  Asegúrate de que la opción **Servir archivos estáticos directamente mediante Nginx** esté activada (*Smart static files processing*).
+- **Compresión Gzip / Brotli:** Habilita la compresión de texto para acelerar la carga de los módulos JavaScript y hojas de estilo CSS.
+- **MIME Types para ES Modules:**  
+  Nginx y Apache en Plesk ya tienen configurado `.js` con `application/javascript`. Si utilizas directivas personalizadas, asegúrate de no bloquear la carga de módulos ES.
+
+#### 3. Versión de PHP
+- Dado que LabelLove es una aplicación puramente estática en el cliente, la versión de PHP configurada en el dominio no tiene ningún impacto en su ejecución. Puedes mantener cualquier versión estándar o incluso desactivar el soporte de scripts del lado del servidor si se desea maximizar el aislamiento.
+
+---
+
+### 🔍 Comprobación y Verificación
+
+Tras completar el despliegue:
+1. Abre tu dominio en el navegador (ej. `https://etiquetas.tudominio.com`).
+2. Abre la consola de herramientas de desarrollo (`F12` o `Cmd + Option + I`).
+3. Verifica en la pestaña **Console** que no existan errores de rutas relativas o imports de ES Modules (`js/app.js`, `js/canvas.js`, etc.).
+4. Confirma en la pestaña **Network** que todos los recursos `.css` y `.js` devuelvan código `200 OK`.
+
+---
+
 ## ⌨️ Atajos de Teclado (Cheat Sheet)
 
 | Atajo | Acción |
